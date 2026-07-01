@@ -1,0 +1,240 @@
+            border-radius: 14px;
+            background: rgba(255,255,255,0.52);
+        }
+
+        .intake-index {
+            width: 26px;
+            height: 26px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+            color: #0f4fa8;
+            background: rgba(31,103,199,0.12);
+            font-size: 0.72rem;
+            font-weight: 760;
+        }
+
+        .intake-copy {
+            min-width: 0;
+        }
+
+        .intake-label {
+            color: var(--ink);
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .intake-caption {
+            color: var(--muted);
+            font-size: 0.68rem;
+            line-height: 1.35;
+            margin-top: 2px;
+        }
+
+        .side-section-label {
+            margin: 16px 0 8px;
+            color: #31445d;
+            font-size: 0.78rem;
+            font-weight: 760;
+        }
+
+        .side-caption-card {
+            padding: 12px 13px;
+            border: 1px solid rgba(120,142,168,0.22);
+            border-radius: 16px;
+            background: rgba(255,255,255,0.5);
+            color: var(--muted);
+            font-size: 0.74rem;
+            line-height: 1.52;
+        }
+
+        .side-summary {
+            margin-top: 16px;
+            padding: 13px;
+            border-radius: 18px;
+            border: 1px solid rgba(31,103,199,0.18);
+            background: linear-gradient(145deg, rgba(31,103,199,0.10), rgba(255,255,255,0.62));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+        }
+
+        .side-summary-title {
+            color: var(--ink);
+            font-size: 0.84rem;
+            font-weight: 760;
+            margin-bottom: 9px;
+        }
+
+        .side-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+        }
+
+        .side-summary-cell {
+            padding: 8px 7px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.62);
+            border: 1px solid rgba(120,142,168,0.16);
+        }
+
+        .side-summary-num {
+            color: #172033;
+            font-size: 1rem;
+            font-weight: 760;
+            line-height: 1;
+        }
+
+        .side-summary-text {
+            color: var(--muted);
+            font-size: 0.66rem;
+            margin-top: 5px;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+            padding: 12px;
+            border: 1px solid rgba(31,103,199,0.18);
+            border-radius: 18px;
+            background: rgba(255,255,255,0.54);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.76), 0 12px 24px rgba(67,88,111,0.08);
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] > label {
+            color: #203047;
+            font-size: 0.78rem;
+            font-weight: 760;
+            margin-bottom: 8px;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section {
+            position: relative;
+            min-height: 120px;
+            padding-bottom: 46px;
+            border: 1px dashed rgba(31,103,199,0.34) !important;
+            border-radius: 16px !important;
+            background:
+                linear-gradient(145deg, rgba(255,255,255,0.88), rgba(232,242,255,0.56)) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section::after {
+            content: "支持 .xlsx / .xls，批量接入";
+            position: absolute;
+            left: 12px;
+            right: 48px;
+            bottom: 12px;
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(120,142,168,0.16);
+            background: rgba(255,255,255,0.72);
+            color: var(--muted);
+            font-size: 0.68rem;
+            font-weight: 620;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.82);
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section:hover {
+            border-color: rgba(31,103,199,0.58) !important;
+            background: linear-gradient(145deg, rgba(255,255,255,0.94), rgba(221,236,255,0.68)) !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section button {
+            border-radius: 10px !important;
+            border: 1px solid rgba(31,103,199,0.22) !important;
+            background: rgba(31,103,199,0.1) !important;
+            color: #0f4fa8 !important;
+            font-weight: 720 !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section p,
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section span,
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section small {
+            color: transparent !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section button[data-testid="stBaseButton-secondary"] {
+            width: 132px;
+            height: 42px;
+            padding: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(224,238,255,0.72)) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 18px rgba(31,103,199,0.08);
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section button[data-testid="stBaseButton-secondary"] > div {
+            display: none !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section button[data-testid="stBaseButton-secondary"]::after {
+            content: "选择文件";
+            color: #0f4fa8;
+            font-size: 0.82rem;
+            font-weight: 760;
+            line-height: 1;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stFileChip"] span,
+        [data-testid="stSidebar"] [data-testid="stFileChip"] p,
+        [data-testid="stSidebar"] [data-testid="stFileUploaderFile"] span,
+        [data-testid="stSidebar"] [data-testid="stFileUploaderFile"] p {
+            color: inherit !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stFileChip"] {
+            position: relative;
+            min-height: 54px;
+            padding: 8px 36px 8px 58px !important;
+            border: 1px solid rgba(120,142,168,0.18);
+            border-radius: 13px;
+            background: rgba(247,250,255,0.76);
+            box-shadow: none;
+            overflow: hidden;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stFileChip"]::before {
+            content: "XLS";
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            width: 36px;
+            height: 36px;
+            transform: translateY(-50%);
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            background: linear-gradient(145deg, #16805a, #2fa36f);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 7px 15px rgba(22,128,90,0.2);
+            z-index: 1;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stFileChip"] > div:first-child {
+            display: none !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stFileChipDeleteBtn"] {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section button[data-testid="stBaseButton-borderlessIcon"] {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            border-radius: 999px !important;
+            border: 1px solid rgba(31,103,199,0.2) !important;
+            background: rgba(255,255,255,0.76) !important;
+            color: #0f4fa8 !important;
