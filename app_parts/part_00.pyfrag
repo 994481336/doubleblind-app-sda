@@ -1,0 +1,240 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+from io import BytesIO
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+from boeing_eval.analysis import (
+    build_pilot_scores,
+    company_stats,
+    company_role_counts,
+    company_role_scores,
+    comprehensive_loss,
+    filter_data,
+    loss_by_item,
+    risk_index,
+    role_score_distribution,
+    score_distribution,
+    subject_company_item_loss,
+    subject_company_loss,
+    subject_item_loss,
+    subject_role_loss,
+    subject_top_items,
+    template_quality,
+)
+from boeing_eval.parsers import parse_many
+from boeing_eval.reports import REPORT_TITLE, build_html_report, build_word_report
+
+
+st.set_page_config(page_title="飞行员双盲测试评估分析", layout="wide")
+
+
+def inject_css() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --ink: #172033;
+            --muted: #64748b;
+            --line: rgba(124, 143, 166, 0.28);
+            --glass: rgba(255, 255, 255, 0.68);
+            --glass-strong: rgba(255, 255, 255, 0.82);
+            --blue: #1f67c7;
+            --blue-soft: rgba(31, 103, 199, 0.12);
+            --green: #16805a;
+            --orange: #b86d1d;
+            --red: #bd3030;
+        }
+
+        html, body, [data-testid="stAppViewContainer"] {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(76, 139, 210, 0.16), transparent 30%),
+                radial-gradient(circle at 88% 0%, rgba(37, 99, 235, 0.10), transparent 28%),
+                linear-gradient(135deg, #f8fbff 0%, #edf3f9 52%, #f8fafc 100%);
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Noto Sans SC", sans-serif;
+        }
+
+        .block-container {
+            padding-top: 2.4rem;
+            padding-bottom: 2rem;
+            max-width: 1500px;
+        }
+
+        [data-testid="stSidebar"] {
+            background:
+                linear-gradient(180deg, rgba(239, 247, 255, 0.86), rgba(247, 251, 255, 0.72)),
+                radial-gradient(circle at 20% 0%, rgba(31, 103, 199, 0.16), transparent 34%);
+            backdrop-filter: blur(22px) saturate(140%);
+            border-right: 1px solid rgba(120, 142, 168, 0.24);
+        }
+
+        [data-testid="stSidebar"] > div:first-child {
+            padding: 1.25rem 1rem 1.5rem;
+        }
+
+        [data-testid="stSidebar"] hr {
+            margin: 1rem 0;
+            border-color: rgba(120, 142, 168, 0.22);
+        }
+
+        h1, h2, h3 {
+            letter-spacing: 0;
+            color: var(--ink);
+        }
+
+        [data-testid="stDecoration"],
+        #MainMenu {
+            visibility: hidden;
+            height: 0;
+        }
+
+        [data-testid="stToolbar"] {
+            visibility: visible;
+            background: transparent;
+        }
+
+        [data-testid="stToolbar"] [data-testid="stBaseButton-header"],
+        [data-testid="stToolbar"] [data-testid="stMainMenuButton"] {
+            visibility: hidden;
+        }
+
+        button[data-testid="stBaseButton-headerNoPadding"]:not([data-testid="stMainMenuButton"]) {
+            visibility: visible !important;
+            width: 32px !important;
+            height: 32px !important;
+            border: 1px solid rgba(120, 142, 168, 0.28) !important;
+            border-radius: 999px !important;
+            background: rgba(255,255,255,0.78) !important;
+            color: #36516d !important;
+            box-shadow: 0 8px 20px rgba(67,88,111,0.13);
+            backdrop-filter: blur(16px) saturate(140%);
+        }
+
+        header[data-testid="stHeader"] {
+            background: transparent;
+            height: 2.75rem;
+        }
+
+        h1 {
+            font-size: 1.55rem !important;
+            font-weight: 760 !important;
+        }
+
+        h3 {
+            font-size: 1rem !important;
+            font-weight: 720 !important;
+        }
+
+        .workbench-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 14px 18px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(244,249,255,0.56));
+            backdrop-filter: blur(20px) saturate(150%);
+            box-shadow: 0 18px 45px rgba(69, 94, 125, 0.11);
+            margin: 4px 0 14px;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            color: white;
+            font-weight: 760;
+            letter-spacing: 0;
+            background: linear-gradient(145deg, #1f67c7, #3f8ade);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 26px rgba(31, 103, 199, 0.26);
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 760;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 4px;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.62);
+            color: #36516d;
+            font-size: 0.82rem;
+            font-weight: 650;
+        }
+
+        .sidebar-brand {
+            position: relative;
+            padding: 15px 14px 14px;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            background:
+                linear-gradient(145deg, rgba(255,255,255,0.82), rgba(235,244,255,0.58)),
+                radial-gradient(circle at 100% 0%, rgba(31,103,199,0.16), transparent 42%);
+            box-shadow: 0 18px 36px rgba(67, 88, 111, 0.12);
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .sidebar-title {
+            font-size: 1.08rem;
+            font-weight: 760;
+            color: var(--ink);
+            margin-bottom: 7px;
+        }
+
+        .sidebar-note {
+            color: var(--muted);
+            font-size: 0.76rem;
+            line-height: 1.5;
+        }
+
+        .intake-steps {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 7px;
+            margin: 0 0 12px;
+        }
+
+        .intake-step {
+            display: grid;
+            grid-template-columns: 26px 1fr;
+            gap: 9px;
+            align-items: center;
+            padding: 9px 10px;
+            border: 1px solid rgba(120,142,168,0.2);
