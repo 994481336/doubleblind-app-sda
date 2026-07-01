@@ -1,0 +1,240 @@
+            <div class="sidebar-note">面向双盲测试与复飞专项检查表。文件只在当前会话内解析，不写入服务器持久目录。</div>
+        </div>
+        <div class="intake-steps">
+            <div class="intake-step">
+                <div class="intake-index">01</div>
+                <div class="intake-copy">
+                    <div class="intake-label">上传固定格式</div>
+                    <div class="intake-caption">支持双盲测试表和复飞专项表</div>
+                </div>
+            </div>
+            <div class="intake-step">
+                <div class="intake-index">02</div>
+                <div class="intake-copy">
+                    <div class="intake-label">核验解析质量</div>
+                    <div class="intake-caption">先看行数、人员数和扣分列</div>
+                </div>
+            </div>
+            <div class="intake-step">
+                <div class="intake-index">03</div>
+                <div class="intake-copy">
+                    <div class="intake-label">筛选并导出报告</div>
+                    <div class="intake-caption">按格式、单位和人员查看结果</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_rule_card() -> None:
+    st.markdown(
+        """
+        <div class="side-section-label">评分口径</div>
+        <div class="side-caption-card">
+            基础分 100 分。扣分项读取 Excel 分值行为负数的列；最终得分优先采用合计或平均行，缺失时按评分行均值计算。
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_summary(file_count: int, pilot_count: int, rating_count: int) -> None:
+    st.markdown(
+        f"""
+        <div class="side-summary">
+            <div class="side-summary-title">会话快照</div>
+            <div class="side-summary-grid">
+                <div class="side-summary-cell">
+                    <div class="side-summary-num">{file_count}</div>
+                    <div class="side-summary-text">文件</div>
+                </div>
+                <div class="side-summary-cell">
+                    <div class="side-summary-num">{pilot_count}</div>
+                    <div class="side-summary-text">人员</div>
+                </div>
+                <div class="side-summary-cell">
+                    <div class="side-summary-num">{rating_count}</div>
+                    <div class="side-summary-text">评分</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+@contextmanager
+def section_card(title: str, meta: str = ""):
+    with st.container(border=True):
+        st.markdown(
+            f"""
+            <div class="section-head">
+                <div class="section-title">{title}</div>
+                <div class="section-meta">{meta}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        yield
+
+
+@st.cache_data(show_spinner=False)
+def parse_uploaded_files(uploaded_payload: tuple[tuple[str, bytes], ...]):
+    return parse_many(list(uploaded_payload))
+
+
+inject_css()
+
+with st.sidebar:
+    render_sidebar_intro()
+    uploaded_files = st.file_uploader(
+        "任务数据包",
+        type=["xlsx", "xls"],
+        accept_multiple_files=True,
+        help="可一次上传一个或多个 Excel 文件。",
+    )
+    render_sidebar_rule_card()
+
+if not uploaded_files:
+    render_top_bar(0, 0)
+    left, right = st.columns([1.05, 1])
+    with left:
+        with section_card("数据接入", "等待上传"):
+            st.markdown(
+                """
+                当前工作台支持两种固定格式：双盲测试表和复飞专项检查表。上传后会先显示解析质量，再进入总览、扣分项、人员明细和报告输出。
+                """
+            )
+            st.info("请从左侧上传 Excel 文件。Public app 不保存上传文件或分析历史。")
+    with right:
+        st.markdown(
+            """
+            <div class="glass-panel">
+                <div class="section-head">
+                    <div class="section-title">支持格式</div>
+                    <div class="section-meta">固定格式</div>
+                </div>
+                <table class="template-table">
+                    <thead>
+                        <tr><th>格式</th><th>分值行</th><th>评估列</th><th>扣分列</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>双盲测试表</td><td>第 3 行</td><td>检查员</td><td>93</td></tr>
+                        <tr><td>复飞专项检查表</td><td>第 5 行</td><td>评估员</td><td>149</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.stop()
+
+payload = tuple((file.name, file.getvalue()) for file in uploaded_files)
+summaries, ratings, summary_scores, deductions = parse_uploaded_files(payload)
+pilot_scores = build_pilot_scores(ratings, summary_scores)
+quality_df = template_quality(summaries, pilot_scores)
+
+render_top_bar(len(summaries), len(deductions))
+
+with st.sidebar:
+    template_options = ["全部"] + sorted(pilot_scores["模板类型"].dropna().unique().tolist()) if not pilot_scores.empty else ["全部"]
+    st.markdown('<div class="side-section-label">分析范围</div>', unsafe_allow_html=True)
+    selected_template = st.selectbox("格式筛选", template_options)
+    filtered_for_company, _ = filter_data(pilot_scores, deductions, selected_template, "全部")
+    company_options = ["全部"] + sorted(filtered_for_company["所属单位"].dropna().unique().tolist()) if not filtered_for_company.empty else ["全部"]
+    selected_company = st.selectbox("单位筛选", company_options)
+    render_sidebar_summary(len(summaries), len(pilot_scores), len(ratings))
+
+filtered_pilots, filtered_deductions = filter_data(pilot_scores, deductions, selected_template, selected_company)
+company_df = company_stats(filtered_pilots)
+top_items = loss_by_item(filtered_deductions, ["模板类型", "科目名称", "评分项目", "扣分标准"], top_n=10)
+
+tab1, tab2, tab3, tab4 = st.tabs(["总览", "扣分项", "人员明细", "报告"])
+
+with tab1:
+    with section_card("解析预览", "每个上传文件的格式和行列校验"):
+        render_quality_table(quality_df)
+
+    avg_score = filtered_pilots["最终得分"].mean() if not filtered_pilots.empty else 0
+    max_score = filtered_pilots["最终得分"].max() if not filtered_pilots.empty else 0
+    min_score = filtered_pilots["最终得分"].min() if not filtered_pilots.empty else 0
+    captain_count = int((filtered_pilots["技术等级"] == "机长").sum()) if not filtered_pilots.empty else 0
+    fo_count = int((filtered_pilots["技术等级"] == "副驾驶").sum()) if not filtered_pilots.empty else 0
+    render_stat_grid(
+        [
+            ("参评人员", f"{len(filtered_pilots)}", "当前筛选范围"),
+            ("平均分", f"{avg_score:.2f}", "按人员最终得分"),
+            ("最高分", f"{max_score:.2f}", "样本峰值"),
+            ("最低分", f"{min_score:.2f}", "重点复盘对象"),
+            ("机长", f"{captain_count}", "技术等级"),
+            ("副驾驶", f"{fo_count}", "技术等级"),
+        ]
+    )
+
+    chart_left, chart_right = st.columns([1, 1])
+    if not company_df.empty:
+        with chart_left:
+            with section_card("单位平均分", "紧凑对比"):
+                fig = make_bar(company_df, "所属单位", "平均分", "各单位平均得分", color="模板类型")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+    if not filtered_pilots.empty:
+        with chart_right:
+            with section_card("得分趋势", "按分数排序"):
+                score_df = filtered_pilots.sort_values("最终得分").copy()
+                score_df["人员"] = score_df["姓名"] + "（" + score_df["所属单位"] + "）"
+                fig = make_line_bar(score_df)
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+    with section_card("单位统计", "人员、分数和技术等级"):
+        st.dataframe(display_df(company_df), width="stretch", hide_index=True)
+
+    overview_left, overview_right = st.columns([1, 1])
+    with overview_left:
+        with section_card("参评人数", "按单位和技术等级"):
+            fig = make_bar(company_role_counts(filtered_pilots), "所属单位", "参评人数", "参加测试人数", color="技术等级")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+    with overview_right:
+        with section_card("技术等级平均分", "单位内对比"):
+            fig = make_bar(company_role_scores(filtered_pilots), "所属单位", "平均分", "机长/副驾驶平均分", color="技术等级")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+
+    dist_left, dist_right = st.columns([1, 1])
+    with dist_left:
+        with section_card("得分分布", "全部人员"):
+            fig = make_bar(score_distribution(filtered_pilots), "分数区间", "人数", "测试人员平均得分分布")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+    with dist_right:
+        with section_card("技术等级得分分布", "机长与副驾驶"):
+            fig = make_bar(role_score_distribution(filtered_pilots), "分数区间", "人数", "技术等级得分分布", color="技术等级")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+
+with tab2:
+    if filtered_deductions.empty:
+        st.success("当前筛选范围内没有扣分明细。")
+    else:
+        chart_left, chart_right = st.columns([1, 1])
+        with chart_left:
+            with section_card("高频扣分项", "TOP 10"):
+                fig = make_bar(top_items, "扣分标准", "总失分", "扣分项失分排名", color="模板类型")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+        with chart_right:
+            with section_card("科目失分", "按真实表头聚合"):
+                subject_loss = loss_by_item(filtered_deductions, ["模板类型", "科目名称"], top_n=None)
+                fig = make_bar(subject_loss, "科目名称", "总失分", "科目失分统计", color="模板类型")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+        with section_card("扣分事件明细", "真实表头、原始列号和评估员记录"):
+            detail_cols = ["评估员", "模板类型", "所属单位", "姓名", "技术等级", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号"]
+            st.dataframe(display_df(filtered_deductions[detail_cols]), width="stretch", hide_index=True)
+
