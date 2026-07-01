@@ -63,8 +63,24 @@ DISPLAY_COLUMN_NAMES = {
 }
 
 
-def display_df(df: pd.DataFrame) -> pd.DataFrame:
-    return df.rename(columns=DISPLAY_COLUMN_NAMES) if not df.empty else df
+def evaluator_label_for(df: pd.DataFrame) -> str:
+    if df.empty or "模板类型" not in df.columns:
+        return "评分人员"
+    template_types = set(df["模板类型"].dropna().astype(str))
+    if template_types == {"双盲测试表"}:
+        return "检查员"
+    if template_types == {"复飞专项检查表"}:
+        return "评估员"
+    return "评分人员"
+
+
+def display_df(df: pd.DataFrame, evaluator_label: str | None = None) -> pd.DataFrame:
+    if df.empty:
+        return df
+    rename_map = DISPLAY_COLUMN_NAMES.copy()
+    if "评估员" in df.columns:
+        rename_map["评估员"] = evaluator_label or evaluator_label_for(df)
+    return df.rename(columns=rename_map)
 
 
 def make_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None):
@@ -222,19 +238,3 @@ def render_quality_table(quality_df: pd.DataFrame) -> None:
     st.dataframe(display_df(quality_df), width="stretch", hide_index=True)
     warning_rows = quality_df[quality_df["状态"] == "需检查"]
     if not warning_rows.empty:
-        st.warning("存在需要检查的文件，请先确认解析预览中的警告和列数。")
-
-
-def render_stat_grid(metrics: list[tuple[str, str, str]]) -> None:
-    cards = "".join(
-        f'<div class="stat-card"><div class="stat-label">{label}</div><div class="stat-value">{value}</div><div class="stat-sub">{sub}</div></div>'
-        for label, value, sub in metrics
-    )
-    st.markdown(f'<div class="stat-grid">{cards}</div>', unsafe_allow_html=True)
-
-
-def render_sidebar_intro() -> None:
-    st.markdown(
-        """
-        <div class="sidebar-brand">
-            <div class="sidebar-title">评估数据接入</div>
