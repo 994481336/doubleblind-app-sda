@@ -1,0 +1,219 @@
+        with section_card("技术等级失分", "机长与副驾驶分层"):
+            role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
+            st.dataframe(display_df(role_loss), width="stretch", hide_index=True)
+
+        subject_left, subject_right = st.columns([1, 1])
+        subject_company = subject_company_loss(filtered_deductions, filtered_pilots)
+        with subject_left:
+            with section_card("单位科目平均失分", "按参评人数折算"):
+                fig = make_bar(subject_company, "所属单位", "人均失分", "各单位科目人均失分", color="科目名称")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(subject_company, width="stretch", hide_index=True)
+        with subject_right:
+            with section_card("各科目单位对比", "人均扣分值"):
+                fig = make_bar(subject_company, "科目名称", "人均失分", "各科目各单位人均扣分值", color="所属单位")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+        top_left, top_right = st.columns([1, 1])
+        with top_left:
+            with section_card("扣分项 TOP 5", "按总失分"):
+                top5 = loss_by_item(filtered_deductions, ["科目名称", "评分项目", "扣分标准"], top_n=5)
+                fig = make_horizontal_bar(top5, "总失分", "扣分标准", "总扣分值排名前 5 的扣分项", color="科目名称")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(top5, width="stretch", hide_index=True)
+        with top_right:
+            with section_card("各科目 TOP 3", "按科目拆分"):
+                top3 = subject_top_items(filtered_deductions, top_n=3)
+                fig = make_horizontal_bar(top3, "总失分", "扣分标准", "各科目失分 TOP 3", color="科目名称", height=360)
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(top3, width="stretch", hide_index=True)
+
+        risk_data = risk_index(filtered_deductions, ratings)
+        with section_card("风险指标", "按触发率和平均失分计算"):
+            if not risk_data.empty:
+                st.download_button(
+                    "下载风险指标明细 Excel",
+                    data=xlsx_bytes({"风险指标": risk_data, "扣分明细": filtered_deductions}),
+                    file_name=f"风险指标明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+                fig = make_horizontal_bar(risk_data.head(12), "风险指数", "扣分标准", "风险指标 TOP 12", color="科目名称", height=420)
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(display_df(risk_data), width="stretch", hide_index=True)
+            else:
+                st.info("当前筛选范围内暂无可计算的风险指标。")
+
+        comp = comprehensive_loss(filtered_deductions)
+        with section_card("综合考评", "扣分项失分占比"):
+            fig = make_pie(comp, "扣分标准", "总失分", "综合考评扣分项失分占比")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+                st.dataframe(comp, width="stretch", hide_index=True)
+            else:
+                st.info("当前筛选范围内暂无综合考评扣分数据。")
+
+        subjects = sorted(filtered_deductions["科目名称"].dropna().astype(str).unique().tolist())
+        with section_card("各科目分析", "整体、技术等级、单位和风险指标"):
+            if not subjects:
+                st.info("当前筛选范围内暂无科目数据。")
+            for idx, subject in enumerate(subjects):
+                with st.expander(subject, expanded=(idx == 0)):
+                    inner1, inner2, inner3, inner4 = st.tabs(["整体分析", "按技术等级", "各单位失分", "风险指标"])
+                    with inner1:
+                        item_loss = subject_item_loss(filtered_deductions, subject)
+                        fig = make_horizontal_bar(item_loss.head(15), "总失分", "扣分标准", f"{subject} 扣分项总失分", height=420)
+                        if fig:
+                            st.plotly_chart(fig, width="stretch")
+                        st.dataframe(item_loss, width="stretch", hide_index=True)
+                    with inner2:
+                        role_subject = subject_role_loss(filtered_deductions, subject)
+                        fig = make_horizontal_bar(role_subject.head(15), "总失分", "扣分标准", f"{subject} 按技术等级失分", color="技术等级", height=420)
+                        if fig:
+                            st.plotly_chart(fig, width="stretch")
+                        st.dataframe(role_subject, width="stretch", hide_index=True)
+                    with inner3:
+                        company_subject = subject_company_item_loss(filtered_deductions, subject)
+                        fig = make_horizontal_bar(company_subject.head(15), "总失分", "扣分标准", f"{subject} 各单位失分", color="所属单位", height=420)
+                        if fig:
+                            st.plotly_chart(fig, width="stretch")
+                        st.dataframe(company_subject, width="stretch", hide_index=True)
+                    with inner4:
+                        subject_risk = risk_data[risk_data["科目名称"] == subject] if not risk_data.empty else pd.DataFrame()
+                        fig = make_horizontal_bar(subject_risk.head(15), "风险指数", "扣分标准", f"{subject} 风险指标", height=420)
+                        if fig:
+                            st.plotly_chart(fig, width="stretch")
+                        st.dataframe(subject_risk, width="stretch", hide_index=True)
+
+with tab3:
+    if filtered_pilots.empty:
+        st.info("当前筛选范围内没有人员数据。")
+    else:
+        filter_left, filter_right = st.columns([1, 1])
+        with filter_left:
+            company_options_detail = ["全部"] + sorted(filtered_pilots["所属单位"].dropna().unique().tolist())
+            detail_company = st.selectbox("个人详情单位筛选", company_options_detail)
+        with filter_right:
+            role_options = ["全部"] + sorted(filtered_pilots["技术等级"].dropna().unique().tolist())
+            selected_role = st.selectbox("技术等级筛选", role_options)
+
+        detail_pilots = filtered_pilots.copy()
+        detail_deductions = filtered_deductions.copy()
+        if detail_company != "全部":
+            detail_pilots = detail_pilots[detail_pilots["所属单位"] == detail_company]
+            if not detail_deductions.empty:
+                detail_deductions = detail_deductions[detail_deductions["所属单位"] == detail_company]
+        if selected_role != "全部":
+            detail_pilots = detail_pilots[detail_pilots["技术等级"] == selected_role]
+            if not detail_deductions.empty:
+                detail_deductions = detail_deductions[detail_deductions["技术等级"] == selected_role]
+
+        render_stat_grid(
+            [
+                ("筛选人数", f"{len(detail_pilots)}", "个人详情范围"),
+                ("平均分", f"{detail_pilots['最终得分'].mean():.2f}" if not detail_pilots.empty else "-", "当前筛选范围"),
+                ("最高分", f"{detail_pilots['最终得分'].max():.2f}" if not detail_pilots.empty else "-", "样本峰值"),
+                ("最低分", f"{detail_pilots['最终得分'].min():.2f}" if not detail_pilots.empty else "-", "重点复盘对象"),
+                ("扣分记录", f"{len(detail_deductions)}", "评估员明细"),
+                ("平均失分", f"{detail_pilots['平均失分'].mean():.2f}" if not detail_pilots.empty else "-", "人员均值"),
+            ]
+        )
+
+        personal_left, personal_right = st.columns([1, 1])
+        with personal_left:
+            with section_card("筛选范围得分分布", "人员最终得分"):
+                fig = make_bar(score_distribution(detail_pilots), "分数区间", "人数", "筛选范围得分分布")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+        with personal_right:
+            with section_card("筛选范围扣分项 TOP 5", "按总失分"):
+                detail_top = loss_by_item(detail_deductions, ["科目名称", "评分项目", "扣分标准"], top_n=5)
+                fig = make_horizontal_bar(detail_top, "总失分", "扣分标准", "筛选范围扣分项 TOP 5", color="科目名称")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+        with section_card("人员档案", "得分、失分和评分人数"):
+            display_cols = ["姓名", "所属单位", "技术等级", "模板类型", "评分人数", "最终得分", "平均失分", "平均扣分项数量"]
+            st.dataframe(
+                display_df(detail_pilots[display_cols].sort_values("最终得分", ascending=False)),
+                width="stretch",
+                hide_index=True,
+            )
+
+        pilot_names = detail_pilots["姓名"].dropna().unique().tolist()
+        if pilot_names:
+            selected_pilot = st.selectbox("选择人员查看原始扣分明细", pilot_names)
+            pilot_deductions = detail_deductions[detail_deductions["姓名"] == selected_pilot]
+            if pilot_deductions.empty:
+                st.success("该人员无扣分项。")
+            else:
+                with section_card("人员扣分明细", selected_pilot):
+                    detail_cols = ["评估员", "模板类型", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号", "来源文件"]
+                    st.dataframe(display_df(pilot_deductions[detail_cols]), width="stretch", hide_index=True)
+
+with tab4:
+    with section_card("报告输出", "所有文件均在当前会话即时生成"):
+        st.caption("应用不持久化保存上传文件、分析结果或导出文件。")
+
+        report_company = company_stats(pilot_scores)
+        report_top_items = loss_by_item(deductions, ["模板类型", "科目名称", "评分项目", "扣分标准"], top_n=20)
+        report_subject_company = subject_company_loss(deductions, pilot_scores)
+        report_risk = risk_index(deductions, ratings)
+        report_comprehensive = comprehensive_loss(deductions)
+        html_report = build_html_report(
+            pilot_scores,
+            report_company,
+            report_top_items,
+            quality_df,
+            report_subject_company,
+            report_risk,
+            report_comprehensive,
+        )
+        word_report = build_word_report(
+            pilot_scores,
+            report_company,
+            report_top_items,
+            quality_df,
+            report_subject_company,
+            report_risk,
+            report_comprehensive,
+        )
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.download_button(
+                "下载 HTML 报告",
+                data=html_report,
+                file_name=f"{REPORT_TITLE}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.html",
+                mime="text/html",
+            )
+        with col2:
+            if word_report:
+                st.download_button(
+                    "下载 Word 报告",
+                    data=word_report,
+                    file_name=f"{REPORT_TITLE}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            else:
+                st.info("当前环境未安装 python-docx，Word 报告下载暂不可用。")
+        with col3:
+            st.download_button(
+                "下载平均得分 CSV",
+                data=csv_bytes(display_df(pilot_scores)),
+                file_name=f"飞行员平均得分_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+            )
+        with col4:
+            st.download_button(
+                "下载扣分明细 CSV",
+                data=csv_bytes(display_df(deductions)),
+                file_name=f"评估员原始扣分明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+            )
+
+st.markdown("---")
+st.caption("固定支持当前双盲测试表和复飞专项检查表。")
