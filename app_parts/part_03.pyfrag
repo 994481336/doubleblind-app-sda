@@ -1,0 +1,240 @@
+
+        @media (max-width: 1180px) {
+            .stat-grid, .audit-strip {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .workbench-top {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .stat-grid, .audit-strip {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_top_bar(total_files: int, total_rows: int) -> None:
+    st.markdown(
+        f"""
+        <div class="workbench-top">
+            <div class="brand-row">
+                <div class="brand-mark">BA</div>
+                <div>
+                    <div class="brand-title">飞行员双盲测试评估分析</div>
+                    <div class="brand-subtitle">双盲测试与复飞专项评估工作台</div>
+                </div>
+            </div>
+            <div class="top-actions">
+                <span class="pill">会话内处理</span>
+                <span class="pill">{total_files} 个文件</span>
+                <span class="pill">{total_rows:,} 条扣分明细</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def csv_bytes(df: pd.DataFrame) -> bytes:
+    return df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
+
+
+def xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    bio = BytesIO()
+    with pd.ExcelWriter(bio, engine="openpyxl") as writer:
+        for sheet_name, df in sheets.items():
+            safe_name = sheet_name[:31] or "Sheet1"
+            display_df(df).to_excel(writer, index=False, sheet_name=safe_name)
+    bio.seek(0)
+    return bio.getvalue()
+
+
+DISPLAY_COLUMN_NAMES = {
+    "模板类型": "文件格式",
+    "模板得分": "表内得分",
+    "模板平均/合计得分": "平均/合计得分",
+}
+
+
+def display_df(df: pd.DataFrame) -> pd.DataFrame:
+    return df.rename(columns=DISPLAY_COLUMN_NAMES) if not df.empty else df
+
+
+def make_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None):
+    if df.empty:
+        return None
+    fig = px.bar(
+        df,
+        x=x,
+        y=y,
+        color=color,
+        text=y,
+        title=title,
+        color_discrete_sequence=["#2f74d0", "#72a7df", "#67a68a", "#c58f46", "#8aa0b8"],
+        labels={"模板类型": "文件格式"},
+    )
+    fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig.update_layout(
+        font={"family": "Arial, sans-serif", "size": 13},
+        title_font={"size": 15},
+        xaxis_title="",
+        yaxis_title="",
+        height=285,
+        plot_bgcolor="rgba(255,255,255,0)",
+        paper_bgcolor="rgba(255,255,255,0)",
+        margin=dict(l=12, r=12, t=46, b=34),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(showgrid=False, linecolor="rgba(100,116,139,0.25)")
+    fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
+    return fig
+
+
+def make_horizontal_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None, height: int = 330):
+    if df.empty:
+        return None
+    fig = px.bar(
+        df,
+        x=x,
+        y=y,
+        color=color,
+        orientation="h",
+        text=x,
+        title=title,
+        color_discrete_sequence=["#2f74d0", "#72a7df", "#67a68a", "#c58f46", "#8aa0b8"],
+        labels={"模板类型": "文件格式"},
+    )
+    fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    fig.update_layout(
+        height=height,
+        font={"family": "Arial, sans-serif", "size": 12},
+        title_font={"size": 15},
+        xaxis_title="",
+        yaxis_title="",
+        plot_bgcolor="rgba(255,255,255,0)",
+        paper_bgcolor="rgba(255,255,255,0)",
+        margin=dict(l=10, r=18, t=46, b=26),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
+    fig.update_yaxes(showgrid=False, linecolor="rgba(100,116,139,0.25)", categoryorder="total ascending")
+    return fig
+
+
+def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
+    if df.empty:
+        return None
+    fig = px.pie(
+        df,
+        names=names,
+        values=values,
+        title=title,
+        color_discrete_sequence=["#2f74d0", "#67a68a", "#c58f46", "#8aa0b8", "#b85d5d"],
+    )
+    fig.update_layout(
+        height=300,
+        font={"family": "Arial, sans-serif", "size": 12},
+        title_font={"size": 15},
+        paper_bgcolor="rgba(255,255,255,0)",
+        margin=dict(l=10, r=10, t=44, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.08, xanchor="center", x=0.5),
+    )
+    return fig
+
+
+def make_line_bar(score_df: pd.DataFrame):
+    if score_df.empty:
+        return None
+    fig = go.Figure()
+    fig.add_bar(
+        x=score_df["人员"],
+        y=score_df["最终得分"],
+        name="最终得分",
+        marker_color="#2f74d0",
+        opacity=0.82,
+    )
+    rolling = score_df["最终得分"].rolling(3, min_periods=1).mean()
+    fig.add_trace(
+        go.Scatter(
+            x=score_df["人员"],
+            y=rolling,
+            mode="lines+markers",
+            name="移动均值",
+            line=dict(color="#173b70", width=2),
+            marker=dict(size=5),
+        )
+    )
+    fig.update_layout(
+        title="人员得分趋势",
+        height=285,
+        font={"family": "Arial, sans-serif", "size": 12},
+        title_font={"size": 15},
+        plot_bgcolor="rgba(255,255,255,0)",
+        paper_bgcolor="rgba(255,255,255,0)",
+        margin=dict(l=12, r=12, t=46, b=34),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        yaxis_range=[max(0, score_df["最终得分"].min() - 5), 105],
+    )
+    fig.update_xaxes(showticklabels=False, showgrid=False, linecolor="rgba(100,116,139,0.25)")
+    fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
+    return fig
+
+
+def render_quality_table(quality_df: pd.DataFrame) -> None:
+    st.markdown(
+        """
+        <div class="section-head">
+            <div class="section-title">解析质量</div>
+            <div class="section-meta">上传后先核验格式、行数与扣分列</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if quality_df.empty:
+        st.info("暂无质量检查数据。")
+        return
+    ok_count = int((quality_df["状态"] == "正常").sum())
+    warning_count = int((quality_df["状态"] == "需检查").sum())
+    total_files = len(quality_df)
+    total_rows = int(quality_df["评分行数"].sum()) if "评分行数" in quality_df else 0
+    total_people = int(quality_df["人员数"].sum()) if "人员数" in quality_df else 0
+    total_cols = int(quality_df["扣分列数"].sum()) if "扣分列数" in quality_df else 0
+    st.markdown(
+        f"""
+        <div class="audit-strip">
+            <div class="audit-cell"><div class="audit-label">文件总数</div><div class="audit-value">{total_files}</div></div>
+            <div class="audit-cell"><div class="audit-label">解析正常</div><div class="audit-value audit-ok">{ok_count}</div></div>
+            <div class="audit-cell"><div class="audit-label">校验提示</div><div class="audit-value audit-warn">{warning_count}</div></div>
+            <div class="audit-cell"><div class="audit-label">评分行数</div><div class="audit-value">{total_rows:,}</div></div>
+            <div class="audit-cell"><div class="audit-label">人员数</div><div class="audit-value">{total_people:,}</div></div>
+            <div class="audit-cell"><div class="audit-label">扣分列</div><div class="audit-value">{total_cols:,}</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.dataframe(display_df(quality_df), width="stretch", hide_index=True)
+    warning_rows = quality_df[quality_df["状态"] == "需检查"]
+    if not warning_rows.empty:
+        st.warning("存在需要检查的文件，请先确认解析预览中的警告和列数。")
+
+
+def render_stat_grid(metrics: list[tuple[str, str, str]]) -> None:
+    cards = "".join(
+        f'<div class="stat-card"><div class="stat-label">{label}</div><div class="stat-value">{value}</div><div class="stat-sub">{sub}</div></div>'
+        for label, value, sub in metrics
+    )
+    st.markdown(f'<div class="stat-grid">{cards}</div>', unsafe_allow_html=True)
+
+
+def render_sidebar_intro() -> None:
+    st.markdown(
+        """
+        <div class="sidebar-brand">
+            <div class="sidebar-title">评估数据接入</div>
