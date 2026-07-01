@@ -144,7 +144,7 @@ def subject_company_loss(deductions: pd.DataFrame, pilot_scores: pd.DataFrame) -
 def subject_top_items(deductions: pd.DataFrame, top_n: int = 3) -> pd.DataFrame:
     if deductions.empty:
         return pd.DataFrame()
-    grouped = loss_by_item(deductions, ["科目名称", "评分项目", "扣分标准"], top_n=None)
+    grouped = loss_by_item(deductions, ["科目名称", "评分项目", "扣分标准", "扣分项"], top_n=None)
     if grouped.empty:
         return grouped
     return grouped.groupby("科目名称", group_keys=False).head(top_n).reset_index(drop=True)
@@ -154,21 +154,21 @@ def subject_item_loss(deductions: pd.DataFrame, subject: str | None = None) -> p
     if deductions.empty:
         return pd.DataFrame()
     data = deductions if subject is None else deductions[deductions["科目名称"] == subject]
-    return loss_by_item(data, ["科目名称", "评分项目", "扣分标准"], top_n=None)
+    return loss_by_item(data, ["科目名称", "评分项目", "扣分标准", "扣分项"], top_n=None)
 
 
 def subject_role_loss(deductions: pd.DataFrame, subject: str | None = None) -> pd.DataFrame:
     if deductions.empty:
         return pd.DataFrame()
     data = deductions if subject is None else deductions[deductions["科目名称"] == subject]
-    return loss_by_item(data, ["技术等级", "评分项目", "扣分标准"], top_n=None)
+    return loss_by_item(data, ["技术等级", "评分项目", "扣分标准", "扣分项"], top_n=None)
 
 
 def subject_company_item_loss(deductions: pd.DataFrame, subject: str | None = None) -> pd.DataFrame:
     if deductions.empty:
         return pd.DataFrame()
     data = deductions if subject is None else deductions[deductions["科目名称"] == subject]
-    return loss_by_item(data, ["所属单位", "评分项目", "扣分标准"], top_n=None)
+    return loss_by_item(data, ["所属单位", "评分项目", "扣分标准", "扣分项"], top_n=None)
 
 
 def risk_index(deductions: pd.DataFrame, ratings: pd.DataFrame | None = None) -> pd.DataFrame:
@@ -177,7 +177,7 @@ def risk_index(deductions: pd.DataFrame, ratings: pd.DataFrame | None = None) ->
     denominator = len(ratings) if ratings is not None and not ratings.empty else deductions["人员ID"].nunique()
     denominator = max(int(denominator or 1), 1)
     grouped = (
-        deductions.groupby(["科目名称", "评分项目", "扣分标准"], dropna=False)
+        deductions.groupby(["科目名称", "评分项目", "扣分标准", "扣分项"], dropna=False)
         .agg(
             扣分次数=("失分", "count"),
             总失分=("失分", "sum"),
@@ -202,7 +202,7 @@ def comprehensive_loss(deductions: pd.DataFrame) -> pd.DataFrame:
     data = deductions[mask]
     if data.empty:
         return pd.DataFrame()
-    return loss_by_item(data, ["评分项目", "扣分标准"], top_n=None)
+    return loss_by_item(data, ["评分项目", "扣分标准", "扣分项"], top_n=None)
 
 
 def template_quality(summaries: pd.DataFrame, pilot_scores: pd.DataFrame) -> pd.DataFrame:
