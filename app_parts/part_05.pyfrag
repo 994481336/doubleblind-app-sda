@@ -1,7 +1,7 @@
         chart_left, chart_right = st.columns([1, 1])
         with chart_left:
             with section_card("高频扣分项", "TOP 10"):
-                fig = make_bar(top_items, "扣分标准", "总失分", "扣分项失分排名", color="模板类型")
+                fig = make_bar(top_items, "扣分项", "总失分", "扣分项失分排名", color="模板类型")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
         with chart_right:
@@ -36,15 +36,15 @@
         top_left, top_right = st.columns([1, 1])
         with top_left:
             with section_card("扣分项 TOP 5", "按总失分"):
-                top5 = loss_by_item(filtered_deductions, ["科目名称", "评分项目", "扣分标准"], top_n=5)
-                fig = make_horizontal_bar(top5, "总失分", "扣分标准", "总扣分值排名前 5 的扣分项", color="科目名称")
+                top5 = loss_by_item(filtered_deductions, ["科目名称", "评分项目", "扣分标准", "扣分项"], top_n=5)
+                fig = make_horizontal_bar(top5, "总失分", "扣分项", "总扣分值排名前 5 的扣分项", color="科目名称")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(top5, width="stretch", hide_index=True)
         with top_right:
             with section_card("各科目 TOP 3", "按科目拆分"):
                 top3 = subject_top_items(filtered_deductions, top_n=3)
-                fig = make_horizontal_bar(top3, "总失分", "扣分标准", "各科目失分 TOP 3", color="科目名称", height=360)
+                fig = make_horizontal_bar(top3, "总失分", "扣分项", "各科目失分 TOP 3", color="科目名称", height=360)
                 if fig:
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(top3, width="stretch", hide_index=True)
@@ -58,7 +58,7 @@
                     file_name=f"风险指标明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-                fig = make_horizontal_bar(risk_data.head(12), "风险指数", "扣分标准", "风险指标 TOP 12", color="科目名称", height=420)
+                fig = make_horizontal_bar(risk_data.head(12), "风险指数", "扣分项", "风险指标 TOP 12", color="科目名称", height=420)
                 if fig:
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(display_df(risk_data), width="stretch", hide_index=True)
@@ -67,7 +67,7 @@
 
         comp = comprehensive_loss(filtered_deductions)
         with section_card("综合考评", "扣分项失分占比"):
-            fig = make_pie(comp, "扣分标准", "总失分", "综合考评扣分项失分占比")
+            fig = make_pie(comp, "扣分项", "总失分", "综合考评扣分项失分占比")
             if fig:
                 st.plotly_chart(fig, width="stretch")
                 st.dataframe(comp, width="stretch", hide_index=True)
@@ -83,25 +83,25 @@
                     inner1, inner2, inner3, inner4 = st.tabs(["整体分析", "按技术等级", "各单位失分", "风险指标"])
                     with inner1:
                         item_loss = subject_item_loss(filtered_deductions, subject)
-                        fig = make_horizontal_bar(item_loss.head(15), "总失分", "扣分标准", f"{subject} 扣分项总失分", height=420)
+                        fig = make_horizontal_bar(item_loss.head(15), "总失分", "扣分项", f"{subject} 扣分项总失分", height=420)
                         if fig:
                             st.plotly_chart(fig, width="stretch")
                         st.dataframe(item_loss, width="stretch", hide_index=True)
                     with inner2:
                         role_subject = subject_role_loss(filtered_deductions, subject)
-                        fig = make_horizontal_bar(role_subject.head(15), "总失分", "扣分标准", f"{subject} 按技术等级失分", color="技术等级", height=420)
+                        fig = make_horizontal_bar(role_subject.head(15), "总失分", "扣分项", f"{subject} 按技术等级失分", color="技术等级", height=420)
                         if fig:
                             st.plotly_chart(fig, width="stretch")
                         st.dataframe(role_subject, width="stretch", hide_index=True)
                     with inner3:
                         company_subject = subject_company_item_loss(filtered_deductions, subject)
-                        fig = make_horizontal_bar(company_subject.head(15), "总失分", "扣分标准", f"{subject} 各单位失分", color="所属单位", height=420)
+                        fig = make_horizontal_bar(company_subject.head(15), "总失分", "扣分项", f"{subject} 各单位失分", color="所属单位", height=420)
                         if fig:
                             st.plotly_chart(fig, width="stretch")
                         st.dataframe(company_subject, width="stretch", hide_index=True)
                     with inner4:
                         subject_risk = risk_data[risk_data["科目名称"] == subject] if not risk_data.empty else pd.DataFrame()
-                        fig = make_horizontal_bar(subject_risk.head(15), "风险指数", "扣分标准", f"{subject} 风险指标", height=420)
+                        fig = make_horizontal_bar(subject_risk.head(15), "风险指数", "扣分项", f"{subject} 风险指标", height=420)
                         if fig:
                             st.plotly_chart(fig, width="stretch")
                         st.dataframe(subject_risk, width="stretch", hide_index=True)
@@ -148,8 +148,8 @@ with tab3:
                     st.plotly_chart(fig, width="stretch")
         with personal_right:
             with section_card("筛选范围扣分项 TOP 5", "按总失分"):
-                detail_top = loss_by_item(detail_deductions, ["科目名称", "评分项目", "扣分标准"], top_n=5)
-                fig = make_horizontal_bar(detail_top, "总失分", "扣分标准", "筛选范围扣分项 TOP 5", color="科目名称")
+                detail_top = loss_by_item(detail_deductions, ["科目名称", "评分项目", "扣分标准", "扣分项"], top_n=5)
+                fig = make_horizontal_bar(detail_top, "总失分", "扣分项", "筛选范围扣分项 TOP 5", color="科目名称")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
 
@@ -181,7 +181,7 @@ with tab4:
         st.caption("应用不持久化保存上传文件、分析结果或导出文件。")
 
         report_company = company_stats(pilot_scores)
-        report_top_items = loss_by_item(deductions, ["模板类型", "科目名称", "评分项目", "扣分标准"], top_n=20)
+        report_top_items = loss_by_item(deductions, ["模板类型", "科目名称", "评分项目", "扣分标准", "扣分项"], top_n=20)
         report_subject_company = subject_company_loss(deductions, pilot_scores)
         report_risk = risk_index(deductions, ratings)
         report_comprehensive = comprehensive_loss(deductions)
