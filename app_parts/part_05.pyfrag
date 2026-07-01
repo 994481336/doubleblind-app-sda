@@ -1,3 +1,20 @@
+        chart_left, chart_right = st.columns([1, 1])
+        with chart_left:
+            with section_card("高频扣分项", "TOP 10"):
+                fig = make_bar(top_items, "扣分标准", "总失分", "扣分项失分排名", color="模板类型")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+        with chart_right:
+            with section_card("科目失分", "按真实表头聚合"):
+                subject_loss = loss_by_item(filtered_deductions, ["模板类型", "科目名称"], top_n=None)
+                fig = make_bar(subject_loss, "科目名称", "总失分", "科目失分统计", color="模板类型")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+
+        with section_card("扣分事件明细", f"真实表头、原始列号和{deduction_person_label}记录"):
+            detail_cols = ["评估员", "模板类型", "所属单位", "姓名", "技术等级", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号"]
+            st.dataframe(display_df(filtered_deductions[detail_cols], deduction_person_label), width="stretch", hide_index=True)
+
         with section_card("技术等级失分", "机长与副驾驶分层"):
             role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
             st.dataframe(display_df(role_loss), width="stretch", hide_index=True)
@@ -118,7 +135,7 @@ with tab3:
                 ("平均分", f"{detail_pilots['最终得分'].mean():.2f}" if not detail_pilots.empty else "-", "当前筛选范围"),
                 ("最高分", f"{detail_pilots['最终得分'].max():.2f}" if not detail_pilots.empty else "-", "样本峰值"),
                 ("最低分", f"{detail_pilots['最终得分'].min():.2f}" if not detail_pilots.empty else "-", "重点复盘对象"),
-                ("扣分记录", f"{len(detail_deductions)}", "评估员明细"),
+                ("扣分记录", f"{len(detail_deductions)}", f"{evaluator_label_for(detail_deductions)}明细"),
                 ("平均失分", f"{detail_pilots['平均失分'].mean():.2f}" if not detail_pilots.empty else "-", "人员均值"),
             ]
         )
@@ -153,7 +170,11 @@ with tab3:
             else:
                 with section_card("人员扣分明细", selected_pilot):
                     detail_cols = ["评估员", "模板类型", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号", "来源文件"]
-                    st.dataframe(display_df(pilot_deductions[detail_cols]), width="stretch", hide_index=True)
+                    st.dataframe(
+                        display_df(pilot_deductions[detail_cols], evaluator_label_for(pilot_deductions)),
+                        width="stretch",
+                        hide_index=True,
+                    )
 
 with tab4:
     with section_card("报告输出", "所有文件均在当前会话即时生成"):
@@ -210,8 +231,8 @@ with tab4:
         with col4:
             st.download_button(
                 "下载扣分明细 CSV",
-                data=csv_bytes(display_df(deductions)),
-                file_name=f"评估员原始扣分明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                data=csv_bytes(display_df(deductions, evaluator_label_for(deductions))),
+                file_name=f"{evaluator_label_for(deductions)}原始扣分明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
             )
 
