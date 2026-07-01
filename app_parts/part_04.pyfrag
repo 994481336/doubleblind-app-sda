@@ -1,3 +1,19 @@
+        st.warning("存在需要检查的文件，请先确认解析预览中的警告和列数。")
+
+
+def render_stat_grid(metrics: list[tuple[str, str, str]]) -> None:
+    cards = "".join(
+        f'<div class="stat-card"><div class="stat-label">{label}</div><div class="stat-value">{value}</div><div class="stat-sub">{sub}</div></div>'
+        for label, value, sub in metrics
+    )
+    st.markdown(f'<div class="stat-grid">{cards}</div>', unsafe_allow_html=True)
+
+
+def render_sidebar_intro() -> None:
+    st.markdown(
+        """
+        <div class="sidebar-brand">
+            <div class="sidebar-title">评估数据接入</div>
             <div class="sidebar-note">面向双盲测试与复飞专项检查表。文件只在当前会话内解析，不写入服务器持久目录。</div>
         </div>
         <div class="intake-steps">
@@ -221,20 +237,4 @@ with tab2:
     if filtered_deductions.empty:
         st.success("当前筛选范围内没有扣分明细。")
     else:
-        chart_left, chart_right = st.columns([1, 1])
-        with chart_left:
-            with section_card("高频扣分项", "TOP 10"):
-                fig = make_bar(top_items, "扣分标准", "总失分", "扣分项失分排名", color="模板类型")
-                if fig:
-                    st.plotly_chart(fig, width="stretch")
-        with chart_right:
-            with section_card("科目失分", "按真实表头聚合"):
-                subject_loss = loss_by_item(filtered_deductions, ["模板类型", "科目名称"], top_n=None)
-                fig = make_bar(subject_loss, "科目名称", "总失分", "科目失分统计", color="模板类型")
-                if fig:
-                    st.plotly_chart(fig, width="stretch")
-
-        with section_card("扣分事件明细", "真实表头、原始列号和评估员记录"):
-            detail_cols = ["评估员", "模板类型", "所属单位", "姓名", "技术等级", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号"]
-            st.dataframe(display_df(filtered_deductions[detail_cols]), width="stretch", hide_index=True)
-
+        deduction_person_label = evaluator_label_for(filtered_deductions)
