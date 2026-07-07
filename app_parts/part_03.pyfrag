@@ -107,6 +107,7 @@ def make_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = N
         paper_bgcolor="rgba(255,255,255,0)",
         margin=dict(l=12, r=12, t=46, b=34),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        barmode="group",
     )
     fig.update_xaxes(showgrid=False, linecolor="rgba(100,116,139,0.25)")
     fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
@@ -138,6 +139,7 @@ def make_horizontal_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str
         paper_bgcolor="rgba(255,255,255,0)",
         margin=dict(l=10, r=18, t=46, b=26),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        barmode="group",
     )
     fig.update_xaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
     fig.update_yaxes(showgrid=False, linecolor="rgba(100,116,139,0.25)", categoryorder="total ascending")
@@ -236,5 +238,3 @@ def render_quality_table(quality_df: pd.DataFrame) -> None:
         unsafe_allow_html=True,
     )
     st.dataframe(display_df(quality_df), width="stretch", hide_index=True)
-    warning_rows = quality_df[quality_df["状态"] == "需检查"]
-    if not warning_rows.empty:
