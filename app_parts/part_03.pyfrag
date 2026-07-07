@@ -170,25 +170,34 @@ def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
 def make_line_bar(score_df: pd.DataFrame):
     if score_df.empty:
         return None
+    plot_df = score_df.reset_index(drop=True).copy()
+    plot_df["趋势序号"] = range(1, len(plot_df) + 1)
+    hover_cols = [col for col in ["人员", "技术等级", "最终得分"] if col in plot_df.columns]
     fig = go.Figure()
     fig.add_bar(
-        x=score_df["人员"],
-        y=score_df["最终得分"],
+        x=plot_df["趋势序号"],
+        y=plot_df["最终得分"],
         name="最终得分",
         marker_color="#2f74d0",
         opacity=0.82,
+        customdata=plot_df[hover_cols],
+        hovertemplate="序号 %{x}<br>%{customdata[0]}<br>得分 %{y:.2f}<extra></extra>",
     )
-    rolling = score_df["最终得分"].rolling(3, min_periods=1).mean()
+    rolling = plot_df["最终得分"].rolling(3, min_periods=1).mean()
     fig.add_trace(
         go.Scatter(
-            x=score_df["人员"],
+            x=plot_df["趋势序号"],
             y=rolling,
             mode="lines+markers",
             name="移动均值",
             line=dict(color="#173b70", width=2),
             marker=dict(size=5),
+            customdata=plot_df[hover_cols],
+            hovertemplate="序号 %{x}<br>%{customdata[0]}<br>移动均值 %{y:.2f}<extra></extra>",
         )
     )
+    y_min = max(0, plot_df["最终得分"].min() - 5)
+    y_max = max(105, plot_df["最终得分"].max() + 5)
     fig.update_layout(
         title="人员得分趋势",
         height=285,
@@ -198,9 +207,9 @@ def make_line_bar(score_df: pd.DataFrame):
         paper_bgcolor="rgba(255,255,255,0)",
         margin=dict(l=12, r=12, t=46, b=34),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        yaxis_range=[max(0, score_df["最终得分"].min() - 5), 105],
+        yaxis_range=[y_min, y_max],
     )
-    fig.update_xaxes(showticklabels=False, showgrid=False, linecolor="rgba(100,116,139,0.25)")
+    fig.update_xaxes(title="按得分排序序号", showgrid=False, linecolor="rgba(100,116,139,0.25)")
     fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
     return fig
 
