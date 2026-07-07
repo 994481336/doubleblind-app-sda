@@ -1,3 +1,5 @@
+    warning_rows = quality_df[quality_df["状态"] == "需检查"]
+    if not warning_rows.empty:
         st.warning("存在需要检查的文件，请先确认解析预览中的警告和列数。")
 
 
