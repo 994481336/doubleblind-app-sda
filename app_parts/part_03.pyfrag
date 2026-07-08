@@ -88,6 +88,33 @@ def table_height(df: pd.DataFrame, min_rows: int = 3, max_rows: int = 28) -> int
     return 38 + rows * 35
 
 
+def score_axis_range(values: pd.Series, reference_y: float | None = None, standard_axis: bool = False) -> list[float]:
+    if standard_axis:
+        return [0, 105]
+
+    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    if reference_y is not None and pd.notna(reference_y):
+        numeric = pd.concat([numeric, pd.Series([float(reference_y)])], ignore_index=True)
+    if numeric.empty:
+        return [0, 105]
+
+    low = float(numeric.min())
+    high = float(numeric.max())
+    span = max(high - low, 1.0)
+    padding = max(span * 0.2, 2.0)
+    axis_low = max(0.0, low - padding)
+    axis_high = high + padding
+    if high <= 100:
+        axis_high = min(105.0, axis_high)
+    if axis_high - axis_low < 8:
+        center = (axis_high + axis_low) / 2
+        axis_low = max(0.0, center - 4)
+        axis_high = center + 4
+        if high <= 100:
+            axis_high = min(105.0, axis_high)
+    return [axis_low, axis_high]
+
+
 def make_bar(
     df: pd.DataFrame,
     x: str,
@@ -96,6 +123,8 @@ def make_bar(
     color: str | None = None,
     reference_y: float | None = None,
     reference_label: str = "平均线",
+    score_axis: bool = False,
+    standard_axis: bool = False,
 ):
     if df.empty:
         return None
@@ -137,7 +166,10 @@ def make_bar(
     if x in df.columns and df[x].nunique(dropna=False) > 10:
         xaxis_options.update({"tickangle": -30, "automargin": True})
     fig.update_xaxes(**xaxis_options)
-    fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
+    yaxis_options = {"gridcolor": "rgba(100,116,139,0.16)", "zeroline": False}
+    if score_axis:
+        yaxis_options["range"] = score_axis_range(df[y], reference_y, standard_axis)
+    fig.update_yaxes(**yaxis_options)
     return fig
 
 
@@ -194,7 +226,7 @@ def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
     return fig
 
 
-def make_line_bar(score_df: pd.DataFrame):
+def make_line_bar(score_df: pd.DataFrame, standard_axis: bool = False):
     if score_df.empty:
         return None
     plot_df = score_df.reset_index(drop=True).copy()
@@ -223,8 +255,6 @@ def make_line_bar(score_df: pd.DataFrame):
             hovertemplate="序号 %{x}<br>%{customdata[0]}<br>移动均值 %{y:.2f}<extra></extra>",
         )
     )
-    y_min = max(0, plot_df["最终得分"].min() - 5)
-    y_max = max(105, plot_df["最终得分"].max() + 5)
     fig.update_layout(
         title="人员得分趋势",
         height=285,
@@ -234,7 +264,7 @@ def make_line_bar(score_df: pd.DataFrame):
         paper_bgcolor="rgba(255,255,255,0)",
         margin=dict(l=12, r=12, t=46, b=34),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        yaxis_range=[y_min, y_max],
+        yaxis_range=score_axis_range(plot_df["最终得分"], standard_axis=standard_axis),
     )
     fig.update_xaxes(title="按得分排序序号", showgrid=False, linecolor="rgba(100,116,139,0.25)")
     fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
