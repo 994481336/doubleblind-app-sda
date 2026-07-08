@@ -264,6 +264,34 @@ def subject_company_item_loss(deductions: pd.DataFrame, subject: str | None = No
     return loss_by_item(data, ["所属单位", "评分项目", "扣分标准", "扣分项"], top_n=None)
 
 
+def subject_loss_ranking(deductions: pd.DataFrame, top_n: int | None = None) -> pd.DataFrame:
+    """按科目总失分排序，返回失分最多的科目排名（可选截断前 N 个）。"""
+    if deductions.empty:
+        return pd.DataFrame()
+    return loss_by_item(deductions, ["科目名称"], top_n=top_n)
+
+
+def top_subject_item_loss(
+    deductions: pd.DataFrame,
+    subject_top_n: int = 3,
+    item_top_n: int = 3,
+) -> pd.DataFrame:
+    """先取失分最多的前 subject_top_n 个科目，再取每个科目内部失分最多的前 item_top_n 个失分项。"""
+    if deductions.empty:
+        return pd.DataFrame()
+    top_subjects = subject_loss_ranking(deductions, top_n=subject_top_n)
+    if top_subjects.empty:
+        return pd.DataFrame()
+    subject_order = top_subjects["科目名称"].tolist()
+    scoped = deductions[deductions["科目名称"].isin(subject_order)]
+    grouped = loss_by_item(scoped, ["科目名称", "评分项目", "扣分标准", "扣分项"], top_n=None)
+    if grouped.empty:
+        return grouped
+    result = grouped.groupby("科目名称", group_keys=False).head(item_top_n).reset_index(drop=True)
+    result["科目名称"] = pd.Categorical(result["科目名称"], categories=subject_order, ordered=True)
+    return result.sort_values(["科目名称", "总失分"], ascending=[True, False]).reset_index(drop=True)
+
+
 def risk_index(deductions: pd.DataFrame, ratings: pd.DataFrame | None = None) -> pd.DataFrame:
     if deductions.empty:
         return pd.DataFrame()
@@ -322,7 +350,7 @@ def filter_data(
     pilot_scores: pd.DataFrame,
     deductions: pd.DataFrame,
     template: str,
-    company: str,
+    company: str | list[str] | tuple[str, ...],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     pilots = pilot_scores.copy()
     ded = deductions.copy()
@@ -330,7 +358,13 @@ def filter_data(
         pilots = pilots[pilots["模板类型"] == template]
         if not ded.empty:
             ded = ded[ded["模板类型"] == template]
-    if company != "全部":
+    if isinstance(company, (list, tuple, set)):
+        companies = [c for c in company if c and c != "全部"]
+        if companies:
+            pilots = pilots[pilots["所属单位"].isin(companies)]
+            if not ded.empty:
+                ded = ded[ded["所属单位"].isin(companies)]
+    elif company != "全部":
         pilots = pilots[pilots["所属单位"] == company]
         if not ded.empty:
             ded = ded[ded["所属单位"] == company]

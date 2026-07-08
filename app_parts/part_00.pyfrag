@@ -24,9 +24,11 @@ from boeing_eval.analysis import (
     subject_company_item_loss,
     subject_company_loss,
     subject_item_loss,
+    subject_loss_ranking,
     subject_role_loss,
     subject_top_items,
     template_quality,
+    top_subject_item_loss,
 )
 from boeing_eval.parsers import parse_many
 from boeing_eval.reports import REPORT_TITLE, build_html_report, build_word_report

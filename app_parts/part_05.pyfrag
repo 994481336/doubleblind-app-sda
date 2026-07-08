@@ -19,17 +19,45 @@
             role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
             st.dataframe(display_df(role_loss), width="stretch", height=table_height(role_loss), hide_index=True)
 
+        with section_card("单位与科目对比范围", "[Kiro 2026-07-08] 可多选公司或科目，用于下方两张对比图表"):
+            compare_company_options = sorted(filtered_deductions["所属单位"].dropna().astype(str).unique().tolist())
+            compare_subject_options = sorted(filtered_deductions["科目名称"].dropna().astype(str).unique().tolist())
+            compare_filter_left, compare_filter_right = st.columns([1, 1])
+            with compare_filter_left:
+                selected_compare_companies = st.multiselect(
+                    "选择公司（可多选，留空表示全部）",
+                    compare_company_options,
+                    default=[],
+                    help="用于查看某一家或某几家公司内部的科目失分对比。",
+                )
+            with compare_filter_right:
+                selected_compare_subjects = st.multiselect(
+                    "选择科目（可多选，留空表示全部）",
+                    compare_subject_options,
+                    default=[],
+                    help="用于查看某一个或某几个科目在各公司之间的失分对比。",
+                )
+
+        compare_deductions = filtered_deductions.copy()
+        if selected_compare_companies:
+            compare_deductions = compare_deductions[compare_deductions["所属单位"].isin(selected_compare_companies)]
+        if selected_compare_subjects:
+            compare_deductions = compare_deductions[compare_deductions["科目名称"].isin(selected_compare_subjects)]
+        compare_pilots = filtered_pilots.copy()
+        if selected_compare_companies:
+            compare_pilots = compare_pilots[compare_pilots["所属单位"].isin(selected_compare_companies)]
+
         subject_left, subject_right = st.columns([1, 1])
-        subject_company = subject_company_loss(filtered_deductions, filtered_pilots)
+        subject_company = subject_company_loss(compare_deductions, compare_pilots)
         with subject_left:
-            with section_card("单位科目平均失分", "按参评人数折算"):
-                fig = make_bar(subject_company, "所属单位", "人均失分", "各单位科目人均失分", color="科目名称")
+            with section_card("单位内部科目对比", "按参评人数折算，支持多选公司"):
+                fig = make_bar(subject_company, "所属单位", "人均失分", "所选单位内部各科目人均失分", color="科目名称")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(subject_company, width="stretch", height=table_height(subject_company), hide_index=True)
         with subject_right:
-            with section_card("各科目单位对比", "人均扣分值"):
-                fig = make_bar(subject_company, "科目名称", "人均失分", "各科目各单位人均扣分值", color="所属单位")
+            with section_card("科目跨单位对比", "人均扣分值，支持多选科目"):
+                fig = make_bar(subject_company, "科目名称", "人均失分", "所选科目各单位人均扣分值", color="所属单位")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
 
@@ -48,6 +76,37 @@
                 if fig:
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(top3, width="stretch", hide_index=True)
+
+        rank_left, rank_right = st.columns([1, 1])
+        with rank_left:
+            with section_card("科目失分排名", "[Kiro 2026-07-08] 按总失分排序，可调整显示数量"):
+                subject_rank_choice = st.selectbox("显示失分最多的前 N 个科目", [3, 5, 10, "全部"], index=0, key="subject_rank_n")
+                subject_rank_top_n = None if subject_rank_choice == "全部" else int(subject_rank_choice)
+                subject_ranking = subject_loss_ranking(filtered_deductions, top_n=subject_rank_top_n)
+                fig = make_horizontal_bar(subject_ranking, "总失分", "科目名称", f"科目失分排名 TOP {subject_rank_choice}", height=360)
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(subject_ranking, width="stretch", hide_index=True)
+        with rank_right:
+            with section_card("失分最多科目的失分项下钻", "[Kiro 2026-07-08] 先取失分最多的科目，再看其内部失分最多的失分项"):
+                drilldown_subject_n = st.selectbox("失分最多的科目数量", [3, 5], index=0, key="drilldown_subject_n")
+                drilldown_item_n = st.selectbox("每个科目显示失分项数量", [3, 5], index=0, key="drilldown_item_n")
+                drilldown_df = top_subject_item_loss(
+                    filtered_deductions,
+                    subject_top_n=int(drilldown_subject_n),
+                    item_top_n=int(drilldown_item_n),
+                )
+                fig = make_horizontal_bar(
+                    drilldown_df,
+                    "总失分",
+                    "扣分项",
+                    f"失分最多 {drilldown_subject_n} 个科目内部失分项 TOP {drilldown_item_n}",
+                    color="科目名称",
+                    height=420,
+                )
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(drilldown_df, width="stretch", hide_index=True)
 
         risk_data = risk_index(filtered_deductions, ratings)
         with section_card("风险指标", "按触发率和平均失分计算"):
