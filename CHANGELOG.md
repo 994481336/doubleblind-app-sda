@@ -39,3 +39,17 @@
 
 - 未修改解析层格式兼容口径，双盲测试表和复飞专项检查表的识别规则不受影响。
 - 未改动报告导出（HTML/Word/CSV/Excel）内容结构。
+
+## 2026-07-08 [Kiro] 修订
+
+- 移除页面上残留的 `[Kiro ...]` 标识文字（卡片说明文案），改动来源和内容只记录在本文件和 README，不出现在 APP 页面上。
+- 扩充图表配色板（`app_parts/part_03.pyfrag` 的 `CHART_COLOR_SEQUENCE`），解决多公司/多科目对比图表颜色不够导致的区分度问题：
+  - 基础色板从 5 种颜色扩展到 15 种，覆盖常见的多公司/多科目场景。
+  - 当分类数量超过 15 种时，自动按分类数量在色相环（`turbo` colorscale）上均匀取色，保证每个分类仍有独立颜色，不会出现颜色重复。
+  - `make_bar()`、`make_horizontal_bar()`、`make_pie()` 均改为按当前图表的分类数量动态选取颜色序列。
+
+### 验证方式
+
+- `python3 -m unittest discover -s tests -p 'test_*.py'` 全部通过。
+- `app_parts/part_*.pyfrag` 拼接编译检查通过。
+- 使用 `streamlit.testing.v1.AppTest` 上传 5 个真实样表（上航/东航/厦航/山航 B737 + 江西航复飞专项检查表），多选 4 家公司并调整排名/下钻下拉，均无异常。

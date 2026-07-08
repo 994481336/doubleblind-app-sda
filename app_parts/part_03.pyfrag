@@ -121,6 +121,23 @@ CHART_AXIS_COLOR = "#000000"
 CHART_GRID_COLOR = "rgba(100,116,139,0.16)"
 CHART_LINE_COLOR = "rgba(100,116,139,0.25)"
 
+# 扩展配色板：覆盖多公司/多科目场景，减少同色复用导致的区分度不足问题。
+CHART_COLOR_SEQUENCE = [
+    "#2f74d0", "#c58f46", "#67a68a", "#b85d5d", "#8a63b8",
+    "#3fa7a0", "#d08a2f", "#5b8fd6", "#a3554f", "#6f9c4a",
+    "#c15f9a", "#4f8a99", "#9a7b3f", "#72a7df", "#8aa0b8",
+]
+
+
+def _color_sequence_for(df: pd.DataFrame, color: str | None) -> list[str]:
+    if not color or color not in df.columns:
+        return CHART_COLOR_SEQUENCE
+    category_count = df[color].nunique(dropna=False)
+    if category_count <= len(CHART_COLOR_SEQUENCE):
+        return CHART_COLOR_SEQUENCE
+    # 类别数超过基础色板时，用色相环补足，保证每个类别仍有独立颜色。
+    return px.colors.sample_colorscale("turbo", [i / category_count for i in range(category_count)])
+
 
 def apply_light_chart_theme(fig):
     fig.update_layout(
@@ -163,7 +180,7 @@ def make_bar(
         color=color,
         text=y,
         title=title,
-        color_discrete_sequence=["#2f74d0", "#72a7df", "#67a68a", "#c58f46", "#8aa0b8"],
+        color_discrete_sequence=_color_sequence_for(df, color),
         labels={"模板类型": "文件格式"},
         template="plotly_white",
     )
@@ -217,7 +234,7 @@ def make_horizontal_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str
         orientation="h",
         text=x,
         title=title,
-        color_discrete_sequence=["#2f74d0", "#72a7df", "#67a68a", "#c58f46", "#8aa0b8"],
+        color_discrete_sequence=_color_sequence_for(df, color),
         labels={"模板类型": "文件格式"},
         template="plotly_white",
     )
@@ -249,7 +266,7 @@ def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
         names=names,
         values=values,
         title=title,
-        color_discrete_sequence=["#2f74d0", "#67a68a", "#c58f46", "#8aa0b8", "#b85d5d"],
+        color_discrete_sequence=_color_sequence_for(df, names),
         template="plotly_white",
     )
     fig.update_layout(

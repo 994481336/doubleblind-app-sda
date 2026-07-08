@@ -19,7 +19,7 @@
             role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
             st.dataframe(display_df(role_loss), width="stretch", height=table_height(role_loss), hide_index=True)
 
-        with section_card("单位与科目对比范围", "[Kiro 2026-07-08] 可多选公司或科目，用于下方两张对比图表"):
+        with section_card("单位与科目对比范围", "可多选公司或科目，用于下方两张对比图表"):
             compare_company_options = sorted(filtered_deductions["所属单位"].dropna().astype(str).unique().tolist())
             compare_subject_options = sorted(filtered_deductions["科目名称"].dropna().astype(str).unique().tolist())
             compare_filter_left, compare_filter_right = st.columns([1, 1])
@@ -79,7 +79,7 @@
 
         rank_left, rank_right = st.columns([1, 1])
         with rank_left:
-            with section_card("科目失分排名", "[Kiro 2026-07-08] 按总失分排序，可调整显示数量"):
+            with section_card("科目失分排名", "按总失分排序，可调整显示数量"):
                 subject_rank_choice = st.selectbox("显示失分最多的前 N 个科目", [3, 5, 10, "全部"], index=0, key="subject_rank_n")
                 subject_rank_top_n = None if subject_rank_choice == "全部" else int(subject_rank_choice)
                 subject_ranking = subject_loss_ranking(filtered_deductions, top_n=subject_rank_top_n)
@@ -88,7 +88,7 @@
                     st.plotly_chart(fig, width="stretch")
                 st.dataframe(subject_ranking, width="stretch", hide_index=True)
         with rank_right:
-            with section_card("失分最多科目的失分项下钻", "[Kiro 2026-07-08] 先取失分最多的科目，再看其内部失分最多的失分项"):
+            with section_card("失分最多科目的失分项下钻", "先取失分最多的科目，再看其内部失分最多的失分项"):
                 drilldown_subject_n = st.selectbox("失分最多的科目数量", [3, 5], index=0, key="drilldown_subject_n")
                 drilldown_item_n = st.selectbox("每个科目显示失分项数量", [3, 5], index=0, key="drilldown_item_n")
                 drilldown_df = top_subject_item_loss(
