@@ -249,3 +249,22 @@
             background: rgba(255,255,255,0.66);
             color: var(--ink);
         }
+
+        .stApp, .stApp label, .stApp p, .stApp span, .stApp div,
+        .stApp button, .stApp input, .stApp textarea, .stApp [role="gridcell"],
+        .stApp [role="columnheader"] {
+            color: #000000 !important;
+        }
+
+        .stApp [data-testid="stMarkdownContainer"], .stApp [data-testid="stWidgetLabel"],
+        .stApp .stMarkdown, .stApp .section-title, .stApp .section-meta,
+        .stApp .stat-label, .stApp .stat-value, .stApp .stat-sub,
+        .stApp .audit-label, .stApp .audit-value {
+            font-size: 1.04em;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section p,
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section span,
+        [data-testid="stSidebar"] div[data-testid="stFileUploader"] section small {
+            color: transparent !important;
+        }
