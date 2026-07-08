@@ -115,9 +115,9 @@ def score_axis_range(values: pd.Series, reference_y: float | None = None, standa
     return [axis_low, axis_high]
 
 
-CHART_FONT = {"family": "Arial, sans-serif", "size": 12, "color": "#172033"}
-CHART_TITLE_FONT = {"size": 15, "color": "#172033"}
-CHART_AXIS_COLOR = "#64748b"
+CHART_FONT = {"family": "Arial, sans-serif", "size": 13, "color": "#000000"}
+CHART_TITLE_FONT = {"size": 16, "color": "#000000"}
+CHART_AXIS_COLOR = "#000000"
 CHART_GRID_COLOR = "rgba(100,116,139,0.16)"
 CHART_LINE_COLOR = "rgba(100,116,139,0.25)"
 
@@ -127,11 +127,11 @@ def apply_light_chart_theme(fig):
         template="plotly_white",
         font=CHART_FONT,
         title_font=CHART_TITLE_FONT,
-        legend_font_color="#334155",
+        legend_font_color="#000000",
         hoverlabel=dict(
             bgcolor="#ffffff",
             bordercolor="rgba(100,116,139,0.28)",
-            font_color="#172033",
+            font_color="#000000",
         ),
     )
     fig.update_xaxes(color=CHART_AXIS_COLOR, tickfont={"color": CHART_AXIS_COLOR}, title_font={"color": CHART_AXIS_COLOR})
@@ -165,7 +165,7 @@ def make_bar(
     )
     fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
     fig.update_layout(
-        font={**CHART_FONT, "size": 13},
+        font={**CHART_FONT, "size": 14},
         title_font=CHART_TITLE_FONT,
         xaxis_title="",
         yaxis_title="",
@@ -184,7 +184,7 @@ def make_bar(
             line_color="#b85d5d",
             annotation_text=f"{reference_label} {float(reference_y):.2f}",
             annotation_position="top left",
-            annotation_font_color="#8f3434",
+            annotation_font_color="#000000",
             annotation_font_size=12,
         )
     xaxis_options = {"showgrid": False, "linecolor": CHART_LINE_COLOR, "color": CHART_AXIS_COLOR}
