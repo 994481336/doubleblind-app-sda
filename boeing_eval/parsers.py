@@ -154,17 +154,22 @@ def find_meta_columns(ws, score_row: int) -> dict[str, int]:
 
 
 def get_filled_headers(ws, score_row: int) -> dict[int, list[str]]:
-    current_by_row = {row_idx: "" for row_idx in range(1, score_row)}
+    merged_map = {}
+    for r in ws.merged_cells.ranges:
+        for row in range(r.min_row, r.max_row + 1):
+            for col in range(r.min_col, r.max_col + 1):
+                merged_map[(row, col)] = (r.min_row, r.min_col)
+
     headers: dict[int, list[str]] = {}
     for col_idx in range(1, ws.max_column + 1):
         parts: list[str] = []
         for row_idx in range(1, score_row):
-            value = compact_text(ws.cell(row_idx, col_idx).value)
-            if value:
-                current_by_row[row_idx] = value
-            inherited = current_by_row[row_idx]
-            if inherited and inherited not in parts:
-                parts.append(inherited)
+            target = merged_map.get((row_idx, col_idx), (row_idx, col_idx))
+            val = ws.cell(target[0], target[1]).value
+            text = compact_text(val)
+            if text and text not in {"分值"}:
+                if text not in parts:
+                    parts.append(text)
         headers[col_idx] = parts
     return headers
 
