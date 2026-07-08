@@ -83,6 +83,8 @@ def normalize_unit(value: Any) -> str:
     text = re.sub(r"复飞专项检查数据采集表", "", text)
     text = re.sub(r"[()（）【】\[\]_-]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
+    if "圆通" in text:
+        return "圆通航空"
     return text
 
 
