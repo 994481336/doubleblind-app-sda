@@ -98,7 +98,7 @@ def section_card(title: str, meta: str = ""):
         yield
 
 
-PARSER_CACHE_VERSION = "2026-07-08-missing-column-guards-v1"
+PARSER_CACHE_VERSION = "2026-07-08-missing-column-guards-v2-header-fix"
 
 
 @st.cache_data(show_spinner=False)
