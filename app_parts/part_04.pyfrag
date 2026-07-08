@@ -163,6 +163,11 @@ with st.sidebar:
     filtered_for_company, _ = filter_data(pilot_scores, deductions, selected_template, "全部")
     company_options = ["全部"] + sorted(filtered_for_company["所属单位"].dropna().unique().tolist()) if not filtered_for_company.empty else ["全部"]
     selected_company = st.selectbox("单位筛选", company_options)
+    use_standard_score_axis = st.toggle(
+        "标准纵轴",
+        value=False,
+        help="开启后分数类图表固定显示 0-100 附近；关闭时自动放大当前数据区间。",
+    )
     render_sidebar_summary(len(summaries), len(pilot_scores), len(ratings))
 
 filtered_pilots, filtered_deductions = filter_data(pilot_scores, deductions, selected_template, selected_company)
@@ -203,6 +208,8 @@ with tab1:
                     color="模板类型",
                     reference_y=avg_score,
                     reference_label="整体平均分",
+                    score_axis=True,
+                    standard_axis=use_standard_score_axis,
                 )
                 if fig:
                     st.plotly_chart(fig, width="stretch")
@@ -212,7 +219,7 @@ with tab1:
             with section_card("得分趋势", "按分数排序"):
                 score_df = filtered_pilots.sort_values("最终得分").copy()
                 score_df["人员"] = score_df["姓名"] + "（" + score_df["所属单位"] + "）"
-                fig = make_line_bar(score_df)
+                fig = make_line_bar(score_df, standard_axis=use_standard_score_axis)
                 if fig:
                     st.plotly_chart(fig, width="stretch")
 
@@ -227,7 +234,15 @@ with tab1:
                 st.plotly_chart(fig, width="stretch")
     with overview_right:
         with section_card("技术等级平均分", "单位内对比"):
-            fig = make_bar(company_role_scores(filtered_pilots), "所属单位", "平均分", "机长/副驾驶平均分", color="技术等级")
+            fig = make_bar(
+                company_role_scores(filtered_pilots),
+                "所属单位",
+                "平均分",
+                "机长/副驾驶平均分",
+                color="技术等级",
+                score_axis=True,
+                standard_axis=use_standard_score_axis,
+            )
             if fig:
                 st.plotly_chart(fig, width="stretch")
 
