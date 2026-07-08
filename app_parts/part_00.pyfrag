@@ -42,8 +42,8 @@ def inject_css() -> None:
         <style>
         :root {
             color-scheme: light;
-            --ink: #172033;
-            --muted: #64748b;
+            --ink: #000000;
+            --muted: #000000;
             --line: rgba(124, 143, 166, 0.28);
             --glass: rgba(255, 255, 255, 0.68);
             --glass-strong: rgba(255, 255, 255, 0.82);
@@ -61,6 +61,7 @@ def inject_css() -> None:
                 linear-gradient(135deg, #f8fbff 0%, #edf3f9 52%, #f8fafc 100%);
             color: var(--ink) !important;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Noto Sans SC", sans-serif;
+            font-size: 17px;
         }
 
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"],
@@ -70,7 +71,7 @@ def inject_css() -> None:
         }
 
         [data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"], .stMarkdown, label {
-            color: var(--ink);
+            color: #000000 !important;
         }
 
         .block-container {
