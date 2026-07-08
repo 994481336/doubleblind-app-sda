@@ -17,7 +17,7 @@
 
         with section_card("技术等级失分", "机长与副驾驶分层"):
             role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
-            st.dataframe(display_df(role_loss), width="stretch", hide_index=True)
+            st.dataframe(display_df(role_loss), width="stretch", height=table_height(role_loss), hide_index=True)
 
         subject_left, subject_right = st.columns([1, 1])
         subject_company = subject_company_loss(filtered_deductions, filtered_pilots)
@@ -26,7 +26,7 @@
                 fig = make_bar(subject_company, "所属单位", "人均失分", "各单位科目人均失分", color="科目名称")
                 if fig:
                     st.plotly_chart(fig, width="stretch")
-                st.dataframe(subject_company, width="stretch", hide_index=True)
+                st.dataframe(subject_company, width="stretch", height=table_height(subject_company), hide_index=True)
         with subject_right:
             with section_card("各科目单位对比", "人均扣分值"):
                 fig = make_bar(subject_company, "科目名称", "人均失分", "各科目各单位人均扣分值", color="所属单位")
@@ -158,6 +158,7 @@ with tab3:
             st.dataframe(
                 display_df(detail_pilots[display_cols].sort_values("最终得分", ascending=False)),
                 width="stretch",
+                height=table_height(detail_pilots, max_rows=24),
                 hide_index=True,
             )
 
