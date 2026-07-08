@@ -19,11 +19,27 @@ DISPLAY_COLUMN_NAMES = {
 }
 
 
-def display_df(df: pd.DataFrame) -> pd.DataFrame:
-    return df.rename(columns=DISPLAY_COLUMN_NAMES) if not df.empty else df
+def evaluator_label_for(df: pd.DataFrame) -> str:
+    if df.empty or "模板类型" not in df.columns:
+        return "评分人员"
+    template_types = set(df["模板类型"].dropna().astype(str))
+    if template_types == {"双盲测试表"}:
+        return "检查员"
+    if template_types == {"复飞专项检查表"}:
+        return "评估员"
+    return "评分人员"
 
 
-def dataframe_to_html_table(df: pd.DataFrame, max_rows: int = 30) -> str:
+def display_df(df: pd.DataFrame, evaluator_label: str | None = None) -> pd.DataFrame:
+    if df.empty:
+        return df
+    rename_map = DISPLAY_COLUMN_NAMES.copy()
+    if "评估员" in df.columns:
+        rename_map["评估员"] = evaluator_label or evaluator_label_for(df)
+    return df.rename(columns=rename_map)
+
+
+def dataframe_to_html_table(df: pd.DataFrame, max_rows: int = 60) -> str:
     if df.empty:
         return "<p>暂无数据。</p>"
     return display_df(df).head(max_rows).to_html(index=False, border=0, classes="data-table", escape=True)
@@ -113,7 +129,7 @@ def build_word_report(
         if df.empty:
             doc.add_paragraph("暂无数据。")
             continue
-        shown = display_df(df).head(12)
+        shown = display_df(df).head(60)
         table = doc.add_table(rows=1, cols=len(shown.columns))
         table.style = "Table Grid"
         for idx, col in enumerate(shown.columns):
