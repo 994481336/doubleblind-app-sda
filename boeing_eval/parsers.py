@@ -18,6 +18,19 @@ EXPECTED_DEDUCTION_COLS = {
     GO_AROUND_TEMPLATE: 149,
 }
 
+AIRCRAFT_MODELS = ["A320", "A330", "A350", "B737", "B747", "B757", "B767", "B777", "B787", "C909", "C919", "ARJ21"]
+BARE_BOEING_MODELS = {"737": "B737", "747": "B747", "757": "B757", "767": "B767", "777": "B777", "787": "B787"}
+KNOWN_AIRCRAFT_KEYWORDS = [
+    ("山航", "B737"),
+    ("山东", "B737"),
+    ("春秋", "A320"),
+    ("福州", "B737"),
+    ("青岛", "A320"),
+    ("长龙", "A320"),
+    ("京东航", "B737"),
+    ("江西", "B737"),
+]
+
 META_ALIASES = {
     "序号": ["序号"],
     "姓名": ["姓名"],
@@ -86,6 +99,32 @@ def normalize_unit(value: Any) -> str:
     if "圆通" in text:
         return "圆通航空"
     return text
+
+
+def detect_aircraft_model(*values: Any) -> str:
+    text = " ".join(compact_text(value).upper() for value in values if compact_text(value))
+    normalized = re.sub(r"[\s_-]+", "", text)
+    for model in AIRCRAFT_MODELS:
+        if model in normalized:
+            return model
+    for bare, model in BARE_BOEING_MODELS.items():
+        if re.search(rf"(?<!\d){bare}(?!\d)", normalized):
+            return model
+    for keyword, model in KNOWN_AIRCRAFT_KEYWORDS:
+        if keyword in normalized:
+            return model
+    return "未识别机型"
+
+
+def aircraft_family(model: Any) -> str:
+    text = compact_text(model).upper()
+    if text.startswith("A"):
+        return "空客"
+    if text.startswith("B"):
+        return "波音"
+    if text.startswith("C") or text.startswith("ARJ"):
+        return "国产"
+    return "未识别"
 
 
 def find_score_row(ws) -> int:
@@ -222,6 +261,7 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
     summary_scores: list[dict[str, Any]] = []
     deduction_events: list[dict[str, Any]] = []
     seen_people: set[str] = set()
+    seen_aircraft: set[str] = set()
     source_unit = source_unit_from_file(file_name)
 
     row_check_cols = list(meta_cols.values()) + deduction_col_indexes
@@ -247,6 +287,9 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
         seq = compact_text(raw_values.get("序号"))
         name = clean_name(raw_values.get("姓名"))
         unit = normalize_unit(raw_values.get("所属单位")) or source_unit
+        aircraft_model = detect_aircraft_model(raw_values.get("所属单位"), file_name)
+        aircraft_type = aircraft_family(aircraft_model)
+        seen_aircraft.add(aircraft_model)
         role = normalize_role(raw_values.get("技术等级"))
         evaluator = compact_text(raw_values.get("评估员"))
         template_score = to_number(raw_values.get("得分"))
@@ -261,6 +304,8 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
                     "人员ID": person_id,
                     "姓名": name,
                     "所属单位": unit,
+                    "机型": aircraft_model,
+                    "机队类型": aircraft_type,
                     "技术等级": role,
                     "评估员": evaluator,
                     "模板得分": template_score,
@@ -284,6 +329,8 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
             "姓名": name,
             "日期": raw_values.get("日期"),
             "所属单位": unit,
+            "机型": aircraft_model,
+            "机队类型": aircraft_type,
             "技术等级": role,
             "总飞行时间": raw_values.get("总飞行时间"),
             "本机型经历时间": raw_values.get("本机型经历时间"),
@@ -309,6 +356,8 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
                     "人员ID": person_id,
                     "姓名": name,
                     "所属单位": unit,
+                    "机型": aircraft_model,
+                    "机队类型": aircraft_type,
                     "技术等级": role,
                     "评估员": evaluator,
                     "科目名称": meta["科目名称"],
@@ -331,6 +380,7 @@ def parse_workbook(file_bytes: bytes, file_name: str) -> ParsedWorkbook:
         "文件名": file_name,
         "模板类型": template_type,
         "工作表": ws.title,
+        "机型": "/".join(sorted(seen_aircraft)) if seen_aircraft else "未识别机型",
         "分值行": score_row,
         "人员数": len(seen_people),
         "评分行数": len(ratings),

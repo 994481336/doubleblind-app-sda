@@ -7,11 +7,18 @@ def build_pilot_scores(ratings: pd.DataFrame, summary_scores: pd.DataFrame) -> p
     if ratings.empty:
         return pd.DataFrame()
 
+    ratings = ratings.copy()
+    for col, default in {"机型": "未识别机型", "机队类型": "未识别"}.items():
+        if col not in ratings.columns:
+            ratings[col] = default
+
     grouped = (
         ratings.groupby("人员ID", dropna=False)
         .agg(
             姓名=("姓名", "first"),
             所属单位=("所属单位", "first"),
+            机型=("机型", "first"),
+            机队类型=("机队类型", "first"),
             技术等级=("技术等级", "first"),
             模板类型=("模板类型", "first"),
             来源文件=("来源文件", "first"),
@@ -42,6 +49,26 @@ def build_pilot_scores(ratings: pd.DataFrame, summary_scores: pd.DataFrame) -> p
     return grouped
 
 
+def fleet_stats(pilot_scores: pd.DataFrame) -> pd.DataFrame:
+    if pilot_scores.empty or "机型" not in pilot_scores.columns:
+        return pd.DataFrame()
+    return (
+        pilot_scores.groupby(["机队类型", "机型", "模板类型"], dropna=False)
+        .agg(
+            参与航司数=("所属单位", "nunique"),
+            参评人数=("人员ID", "count"),
+            平均分=("最终得分", "mean"),
+            最高分=("最终得分", "max"),
+            最低分=("最终得分", "min"),
+            机长人数=("技术等级", lambda s: (s == "机长").sum()),
+            副驾驶人数=("技术等级", lambda s: (s == "副驾驶").sum()),
+        )
+        .reset_index()
+        .round({"平均分": 2, "最高分": 2, "最低分": 2})
+        .sort_values(["机队类型", "平均分"], ascending=[True, False])
+    )
+
+
 def company_stats(pilot_scores: pd.DataFrame) -> pd.DataFrame:
     if pilot_scores.empty:
         return pd.DataFrame()
@@ -58,6 +85,49 @@ def company_stats(pilot_scores: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
         .round({"平均分": 2, "最高分": 2, "最低分": 2})
         .sort_values(["模板类型", "平均分"], ascending=[True, False])
+    )
+
+
+def company_aircraft_stats(pilot_scores: pd.DataFrame) -> pd.DataFrame:
+    if pilot_scores.empty or "机型" not in pilot_scores.columns:
+        return pd.DataFrame()
+    return (
+        pilot_scores.groupby(["所属单位", "机型", "机队类型", "模板类型"], dropna=False)
+        .agg(
+            参评人数=("人员ID", "count"),
+            平均分=("最终得分", "mean"),
+            最高分=("最终得分", "max"),
+            最低分=("最终得分", "min"),
+            机长人数=("技术等级", lambda s: (s == "机长").sum()),
+            副驾驶人数=("技术等级", lambda s: (s == "副驾驶").sum()),
+        )
+        .reset_index()
+        .round({"平均分": 2, "最高分": 2, "最低分": 2})
+        .sort_values(["所属单位", "机队类型", "机型"])
+    )
+
+
+def fleet_company_scores(pilot_scores: pd.DataFrame) -> pd.DataFrame:
+    if pilot_scores.empty or "机型" not in pilot_scores.columns:
+        return pd.DataFrame()
+    return (
+        pilot_scores.groupby(["机型", "所属单位"], dropna=False)
+        .agg(参评人数=("人员ID", "count"), 平均分=("最终得分", "mean"))
+        .reset_index()
+        .round({"平均分": 2})
+        .sort_values(["机型", "平均分"], ascending=[True, False])
+    )
+
+
+def fleet_role_scores(pilot_scores: pd.DataFrame) -> pd.DataFrame:
+    if pilot_scores.empty or "机型" not in pilot_scores.columns:
+        return pd.DataFrame()
+    return (
+        pilot_scores.groupby(["机型", "技术等级"], dropna=False)
+        .agg(参评人数=("人员ID", "count"), 平均分=("最终得分", "mean"))
+        .reset_index()
+        .round({"平均分": 2})
+        .sort_values(["机型", "技术等级"])
     )
 
 
@@ -139,6 +209,29 @@ def subject_company_loss(deductions: pd.DataFrame, pilot_scores: pd.DataFrame) -
     )
     stats["人均失分"] = stats["总失分"] / stats["参评人数"].replace(0, pd.NA)
     return stats.round({"总失分": 2, "人均失分": 2}).sort_values(["所属单位", "科目名称"])
+
+
+def fleet_subject_loss(deductions: pd.DataFrame, pilot_scores: pd.DataFrame) -> pd.DataFrame:
+    if deductions.empty or pilot_scores.empty or "机型" not in deductions.columns:
+        return pd.DataFrame()
+    people_count = pilot_scores.groupby("机型", dropna=False)["人员ID"].nunique().reset_index(name="参评人数")
+    stats = (
+        deductions.groupby(["机型", "科目名称"], dropna=False)
+        .agg(总失分=("失分", "sum"), 扣分次数=("失分", "count"))
+        .reset_index()
+        .merge(people_count, on="机型", how="left")
+    )
+    stats["人均失分"] = stats["总失分"] / stats["参评人数"].replace(0, pd.NA)
+    return stats.round({"总失分": 2, "人均失分": 2}).sort_values(["机型", "人均失分"], ascending=[True, False])
+
+
+def fleet_top_items(deductions: pd.DataFrame, top_n: int = 5) -> pd.DataFrame:
+    if deductions.empty or "机型" not in deductions.columns:
+        return pd.DataFrame()
+    grouped = loss_by_item(deductions, ["机型", "科目名称", "评分项目", "扣分标准", "扣分项"], top_n=None)
+    if grouped.empty:
+        return grouped
+    return grouped.groupby("机型", group_keys=False).head(top_n).reset_index(drop=True)
 
 
 def subject_top_items(deductions: pd.DataFrame, top_n: int = 3) -> pd.DataFrame:

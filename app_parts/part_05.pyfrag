@@ -154,7 +154,7 @@ with tab3:
                     st.plotly_chart(fig, width="stretch")
 
         with section_card("人员档案", "得分、失分和评分人数"):
-            display_cols = ["姓名", "所属单位", "技术等级", "模板类型", "评分人数", "最终得分", "平均失分", "平均扣分项数量"]
+            display_cols = ["姓名", "所属单位", "机型", "技术等级", "模板类型", "评分人数", "最终得分", "平均失分", "平均扣分项数量"]
             st.dataframe(
                 display_df(detail_pilots[display_cols].sort_values("最终得分", ascending=False)),
                 width="stretch",
@@ -170,7 +170,7 @@ with tab3:
                 st.success("该人员无扣分项。")
             else:
                 with section_card("人员扣分明细", selected_pilot):
-                    detail_cols = ["评估员", "模板类型", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号", "来源文件"]
+                    detail_cols = ["评估员", "模板类型", "机型", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号", "来源文件"]
                     st.dataframe(
                         display_df(pilot_deductions[detail_cols], evaluator_label_for(pilot_deductions)),
                         width="stretch",
@@ -236,6 +236,164 @@ with tab4:
                 file_name=f"{evaluator_label_for(deductions)}原始扣分明细_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
             )
+
+with tab5:
+    st.caption("用于准备简报的数据素材，不生成 PPT 成品。公司 Logo、历史对比和 PPT 导出不在当前范围内。")
+
+    with section_card("简报数据包", "机队、单位和公司画像素材"):
+        briefing_sheets = {
+            "机队总览": brief_fleet_df,
+            "机型单位对比": brief_fleet_company_df,
+            "机型角色得分": brief_fleet_role_df,
+            "机型科目失分": brief_fleet_subject_df,
+            "机型TOP扣分项": brief_fleet_top_df,
+            "公司机型画像": brief_company_aircraft_df,
+            "单位总览": company_df,
+        }
+        st.download_button(
+            "下载简报素材 Excel",
+            data=xlsx_bytes(briefing_sheets),
+            file_name=f"简报素材数据包_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        st.dataframe(display_df(brief_fleet_df), width="stretch", height=table_height(brief_fleet_df), hide_index=True)
+
+    fleet_left, fleet_right = st.columns([1, 1])
+    with fleet_left:
+        with section_card("机队平均分", "按机型汇总"):
+            fig = make_bar(
+                brief_fleet_df,
+                "机型",
+                "平均分",
+                "各机型平均得分",
+                color="机队类型",
+                score_axis=True,
+                standard_axis=use_standard_score_axis,
+            )
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+    with fleet_right:
+        with section_card("机队参与规模", "航司数和人员数"):
+            fig = make_bar(brief_fleet_df, "机型", "参评人数", "各机型参评人数", color="机队类型")
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+
+    model_options = sorted([m for m in filtered_pilots.get("机型", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()])
+    if model_options:
+        selected_model = st.selectbox("选择机型生成机队分析素材", model_options)
+        model_pilots = filtered_pilots[filtered_pilots["机型"] == selected_model]
+        model_deductions = filtered_deductions[filtered_deductions["机型"] == selected_model] if not filtered_deductions.empty and "机型" in filtered_deductions.columns else pd.DataFrame()
+        model_company = brief_fleet_company_df[brief_fleet_company_df["机型"] == selected_model]
+        model_role = brief_fleet_role_df[brief_fleet_role_df["机型"] == selected_model]
+        model_subject = brief_fleet_subject_df[brief_fleet_subject_df["机型"] == selected_model]
+        model_top = brief_fleet_top_df[brief_fleet_top_df["机型"] == selected_model]
+        best_company = model_company.iloc[0]["所属单位"] if not model_company.empty else "-"
+        weakest_subject = model_subject.iloc[0]["科目名称"] if not model_subject.empty else "-"
+        top_item = model_top.iloc[0]["扣分项"] if not model_top.empty else "-"
+        role_avg = model_role.set_index("技术等级")["平均分"].to_dict() if not model_role.empty else {}
+
+        with section_card(f"{selected_model} 机队分析素材", "参与规模、角色、科目和高频扣分项"):
+            render_stat_grid(
+                [
+                    ("参与航司", f"{model_pilots['所属单位'].nunique()}", "当前筛选范围"),
+                    ("参评人数", f"{len(model_pilots)}", "人员数量"),
+                    ("平均分", f"{model_pilots['最终得分'].mean():.2f}", "机队总体"),
+                    ("机长均分", f"{role_avg.get('机长', 0):.2f}" if role_avg else "-", "技术等级"),
+                    ("副驾驶均分", f"{role_avg.get('副驾驶', 0):.2f}" if role_avg else "-", "技术等级"),
+                    ("最高单位", f"{best_company}", "按平均分"),
+                ]
+            )
+            st.markdown(
+                f"""
+                - 简报口径：{selected_model} 机型共有 {model_pilots['所属单位'].nunique()} 家单位、{len(model_pilots)} 名人员纳入当前筛选范围，平均分 {model_pilots['最终得分'].mean():.2f} 分。
+                - 单位表现：当前平均分最高单位为 {best_company}。
+                - 科目关注：人均失分最高科目为 {weakest_subject}。
+                - 高频扣分：当前总失分最高扣分项为 {top_item}。
+                """
+            )
+
+        model_chart_left, model_chart_right = st.columns([1, 1])
+        with model_chart_left:
+            with section_card(f"{selected_model} 单位得分", "用于机队页航司对比"):
+                fig = make_bar(
+                    model_company,
+                    "所属单位",
+                    "平均分",
+                    f"{selected_model} 各单位平均分",
+                    reference_y=model_pilots["最终得分"].mean(),
+                    reference_label="机型平均分",
+                    score_axis=True,
+                    standard_axis=use_standard_score_axis,
+                )
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(model_company, width="stretch", height=table_height(model_company), hide_index=True)
+        with model_chart_right:
+            with section_card(f"{selected_model} 科目人均失分", "用于机队页科目分析"):
+                fig = make_bar(model_subject, "科目名称", "人均失分", f"{selected_model} 科目人均失分")
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(model_subject, width="stretch", height=table_height(model_subject), hide_index=True)
+
+        with section_card(f"{selected_model} 高频扣分项", "用于失分 TOP 页面"):
+            fig = make_horizontal_bar(model_top, "总失分", "扣分项", f"{selected_model} 扣分项 TOP 5", color="科目名称", height=360)
+            if fig:
+                st.plotly_chart(fig, width="stretch")
+            st.dataframe(model_top, width="stretch", height=table_height(model_top), hide_index=True)
+
+    company_profile_options = sorted(filtered_pilots["所属单位"].dropna().astype(str).unique().tolist()) if not filtered_pilots.empty else []
+    if company_profile_options:
+        selected_profile_company = st.selectbox("选择单位生成公司画像素材", company_profile_options)
+        profile_pilots = filtered_pilots[filtered_pilots["所属单位"] == selected_profile_company]
+        profile_deductions = filtered_deductions[filtered_deductions["所属单位"] == selected_profile_company] if not filtered_deductions.empty else pd.DataFrame()
+        profile_models = brief_company_aircraft_df[brief_company_aircraft_df["所属单位"] == selected_profile_company]
+        profile_subject = subject_company_loss(profile_deductions, profile_pilots)
+        profile_top = loss_by_item(profile_deductions, ["机型", "科目名称", "评分项目", "扣分标准", "扣分项"], top_n=5)
+        model_text = "、".join(profile_models["机型"].dropna().astype(str).unique().tolist()) if not profile_models.empty else "-"
+        key_subject = profile_subject.sort_values("人均失分", ascending=False).iloc[0]["科目名称"] if not profile_subject.empty else "-"
+        key_item = profile_top.iloc[0]["扣分项"] if not profile_top.empty else "-"
+
+        with section_card(f"{selected_profile_company} 公司画像素材", "参与机型、核心风险和可复制文字"):
+            render_stat_grid(
+                [
+                    ("参与机型", f"{profile_pilots['机型'].nunique()}", model_text),
+                    ("参评人数", f"{len(profile_pilots)}", "当前筛选范围"),
+                    ("平均分", f"{profile_pilots['最终得分'].mean():.2f}", "单位总体"),
+                    ("最高分", f"{profile_pilots['最终得分'].max():.2f}", "人员峰值"),
+                    ("最低分", f"{profile_pilots['最终得分'].min():.2f}", "重点复盘对象"),
+                    ("扣分记录", f"{len(profile_deductions)}", "原始事件"),
+                ]
+            )
+            st.markdown(
+                f"""
+                - 基础概况：{selected_profile_company} 当前参与机型为 {model_text}，共 {len(profile_pilots)} 名人员纳入分析，平均得分 {profile_pilots['最终得分'].mean():.2f} 分。
+                - 主要风险：人均失分最高科目为 {key_subject}。
+                - 高频问题：当前总失分最高扣分项为 {key_item}。
+                - 简报建议：可结合机型平均分和高频扣分项，补充训练重点与后续复盘方向。
+                """
+            )
+
+        profile_left, profile_right = st.columns([1, 1])
+        with profile_left:
+            with section_card(f"{selected_profile_company} 各机型得分", "用于公司概况页"):
+                fig = make_bar(
+                    profile_models,
+                    "机型",
+                    "平均分",
+                    f"{selected_profile_company} 各机型平均分",
+                    color="机队类型",
+                    score_axis=True,
+                    standard_axis=use_standard_score_axis,
+                )
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(profile_models, width="stretch", height=table_height(profile_models), hide_index=True)
+        with profile_right:
+            with section_card(f"{selected_profile_company} 核心风险", "TOP 5 扣分项"):
+                fig = make_horizontal_bar(profile_top, "总失分", "扣分项", f"{selected_profile_company} 扣分项 TOP 5", color="科目名称", height=360)
+                if fig:
+                    st.plotly_chart(fig, width="stretch")
+                st.dataframe(profile_top, width="stretch", height=table_height(profile_top), hide_index=True)
 
 st.markdown("---")
 st.caption("固定支持当前双盲测试表和复飞专项检查表。")

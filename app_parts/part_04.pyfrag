@@ -98,7 +98,7 @@ def section_card(title: str, meta: str = ""):
         yield
 
 
-PARSER_CACHE_VERSION = "2026-07-08-yto-unit-merge-v2"
+PARSER_CACHE_VERSION = "2026-07-08-briefing-material-v3"
 
 
 @st.cache_data(show_spinner=False)
@@ -176,8 +176,14 @@ with st.sidebar:
 filtered_pilots, filtered_deductions = filter_data(pilot_scores, deductions, selected_template, selected_company)
 company_df = company_stats(filtered_pilots)
 top_items = loss_by_item(filtered_deductions, ["模板类型", "科目名称", "评分项目", "扣分标准", "扣分项"], top_n=10)
+brief_fleet_df = fleet_stats(filtered_pilots)
+brief_company_aircraft_df = company_aircraft_stats(filtered_pilots)
+brief_fleet_company_df = fleet_company_scores(filtered_pilots)
+brief_fleet_role_df = fleet_role_scores(filtered_pilots)
+brief_fleet_subject_df = fleet_subject_loss(filtered_deductions, filtered_pilots)
+brief_fleet_top_df = fleet_top_items(filtered_deductions, top_n=5)
 
-tab1, tab2, tab3, tab4 = st.tabs(["总览", "扣分项", "人员明细", "报告"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["总览", "扣分项", "人员明细", "报告", "简报素材"])
 
 with tab1:
     with section_card("解析预览", "每个上传文件的格式和行列校验"):

@@ -11,11 +11,17 @@ import streamlit as st
 
 from boeing_eval.analysis import (
     build_pilot_scores,
+    company_aircraft_stats,
     company_stats,
     company_role_counts,
     company_role_scores,
     comprehensive_loss,
     filter_data,
+    fleet_company_scores,
+    fleet_role_scores,
+    fleet_stats,
+    fleet_subject_loss,
+    fleet_top_items,
     loss_by_item,
     risk_index,
     role_score_distribution,
