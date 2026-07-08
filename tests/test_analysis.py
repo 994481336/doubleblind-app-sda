@@ -1,4 +1,4 @@
-# [Kiro 2026-07-08] 新增：验证科目失分排名与科目->失分项两级下钻逻辑。
+# 验证科目失分排名与科目->失分项两级下钻逻辑。
 import unittest
 
 import pandas as pd
