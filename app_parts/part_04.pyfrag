@@ -98,7 +98,7 @@ def section_card(title: str, meta: str = ""):
         yield
 
 
-PARSER_CACHE_VERSION = "2026-07-08-briefing-material-v3"
+PARSER_CACHE_VERSION = "2026-07-08-missing-column-guards-v1"
 
 
 @st.cache_data(show_spinner=False)
@@ -155,6 +155,60 @@ if not uploaded_files:
 payload = tuple((file.name, file.getvalue()) for file in uploaded_files)
 summaries, ratings, summary_scores, deductions = parse_uploaded_files(payload, PARSER_CACHE_VERSION)
 pilot_scores = build_pilot_scores(ratings, summary_scores)
+summaries = ensure_columns(
+    summaries,
+    {
+        "文件名": "",
+        "模板类型": "未知格式",
+        "工作表": "",
+        "机型": "未识别机型",
+        "分值行": pd.NA,
+        "人员数": 0,
+        "评分行数": 0,
+        "平均/合计行数": 0,
+        "扣分列数": 0,
+        "警告": "",
+    },
+)
+pilot_scores = ensure_columns(
+    pilot_scores,
+    {
+        "人员ID": "",
+        "姓名": "",
+        "所属单位": "未识别单位",
+        "机型": "未识别机型",
+        "机队类型": "未识别",
+        "技术等级": "未识别",
+        "模板类型": "未知格式",
+        "来源文件": "",
+        "评分人数": 0,
+        "最终得分": pd.NA,
+        "平均失分": pd.NA,
+        "平均扣分项数量": pd.NA,
+    },
+)
+deductions = ensure_columns(
+    deductions,
+    {
+        "人员ID": "",
+        "姓名": "",
+        "所属单位": "未识别单位",
+        "机型": "未识别机型",
+        "机队类型": "未识别",
+        "技术等级": "未识别",
+        "评估员": "",
+        "科目名称": "未识别科目",
+        "评分项目": "未识别评分项目",
+        "扣分标准": "未识别扣分标准",
+        "扣分项": "未识别扣分项",
+        "标准分值": 0,
+        "扣分值": 0,
+        "失分": 0,
+        "原始列号": "",
+        "来源文件": "",
+        "模板类型": "未知格式",
+    },
+)
 quality_df = template_quality(summaries, pilot_scores)
 
 render_top_bar(len(summaries), len(deductions))
@@ -182,6 +236,78 @@ brief_fleet_company_df = fleet_company_scores(filtered_pilots)
 brief_fleet_role_df = fleet_role_scores(filtered_pilots)
 brief_fleet_subject_df = fleet_subject_loss(filtered_deductions, filtered_pilots)
 brief_fleet_top_df = fleet_top_items(filtered_deductions, top_n=5)
+company_df = ensure_columns(
+    company_df,
+    {
+        "所属单位": "",
+        "模板类型": "",
+        "参评人数": 0,
+        "平均分": pd.NA,
+        "最高分": pd.NA,
+        "最低分": pd.NA,
+        "机长人数": 0,
+        "副驾驶人数": 0,
+    },
+)
+top_items = ensure_columns(
+    top_items,
+    {
+        "模板类型": "",
+        "科目名称": "",
+        "评分项目": "",
+        "扣分标准": "",
+        "扣分项": "",
+        "扣分次数": 0,
+        "总失分": 0,
+        "平均失分": 0,
+    },
+)
+brief_fleet_df = ensure_columns(
+    brief_fleet_df,
+    {
+        "机队类型": "",
+        "机型": "",
+        "模板类型": "",
+        "参与航司数": 0,
+        "参评人数": 0,
+        "平均分": pd.NA,
+        "最高分": pd.NA,
+        "最低分": pd.NA,
+        "机长人数": 0,
+        "副驾驶人数": 0,
+    },
+)
+brief_company_aircraft_df = ensure_columns(
+    brief_company_aircraft_df,
+    {
+        "所属单位": "",
+        "机型": "",
+        "机队类型": "",
+        "模板类型": "",
+        "参评人数": 0,
+        "平均分": pd.NA,
+        "最高分": pd.NA,
+        "最低分": pd.NA,
+        "机长人数": 0,
+        "副驾驶人数": 0,
+    },
+)
+brief_fleet_company_df = ensure_columns(
+    brief_fleet_company_df,
+    {"机型": "", "所属单位": "", "参评人数": 0, "平均分": pd.NA},
+)
+brief_fleet_role_df = ensure_columns(
+    brief_fleet_role_df,
+    {"机型": "", "技术等级": "", "参评人数": 0, "平均分": pd.NA},
+)
+brief_fleet_subject_df = ensure_columns(
+    brief_fleet_subject_df,
+    {"机型": "", "科目名称": "", "总失分": 0, "扣分次数": 0, "参评人数": 0, "人均失分": 0},
+)
+brief_fleet_top_df = ensure_columns(
+    brief_fleet_top_df,
+    {"机型": "", "科目名称": "", "评分项目": "", "扣分标准": "", "扣分项": "", "扣分次数": 0, "总失分": 0, "平均失分": 0},
+)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["总览", "扣分项", "人员明细", "报告", "简报素材"])
 

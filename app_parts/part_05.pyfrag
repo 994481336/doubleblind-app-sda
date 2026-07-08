@@ -13,7 +13,7 @@
 
         with section_card("扣分事件明细", f"真实表头、原始列号和{deduction_person_label}记录"):
             detail_cols = ["评估员", "模板类型", "所属单位", "姓名", "技术等级", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号"]
-            st.dataframe(display_df(filtered_deductions[detail_cols], deduction_person_label), width="stretch", hide_index=True)
+            st.dataframe(display_df(safe_columns(filtered_deductions, detail_cols), deduction_person_label), width="stretch", hide_index=True)
 
         with section_card("技术等级失分", "机长与副驾驶分层"):
             role_loss = loss_by_item(filtered_deductions, ["模板类型", "技术等级", "科目名称"], top_n=None)
@@ -156,7 +156,7 @@ with tab3:
         with section_card("人员档案", "得分、失分和评分人数"):
             display_cols = ["姓名", "所属单位", "机型", "技术等级", "模板类型", "评分人数", "最终得分", "平均失分", "平均扣分项数量"]
             st.dataframe(
-                display_df(detail_pilots[display_cols].sort_values("最终得分", ascending=False)),
+                display_df(safe_columns(detail_pilots, display_cols).sort_values("最终得分", ascending=False)),
                 width="stretch",
                 height=table_height(detail_pilots, max_rows=24),
                 hide_index=True,
@@ -172,7 +172,7 @@ with tab3:
                 with section_card("人员扣分明细", selected_pilot):
                     detail_cols = ["评估员", "模板类型", "机型", "科目名称", "评分项目", "扣分标准", "扣分值", "原始列号", "来源文件"]
                     st.dataframe(
-                        display_df(pilot_deductions[detail_cols], evaluator_label_for(pilot_deductions)),
+                        display_df(safe_columns(pilot_deductions, detail_cols), evaluator_label_for(pilot_deductions)),
                         width="stretch",
                         hide_index=True,
                     )

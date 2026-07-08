@@ -152,6 +152,10 @@ def make_bar(
 ):
     if df.empty:
         return None
+    if x not in df.columns or y not in df.columns:
+        return None
+    if color and color not in df.columns:
+        color = None
     fig = px.bar(
         df,
         x=x,
@@ -201,6 +205,10 @@ def make_bar(
 def make_horizontal_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None, height: int = 330):
     if df.empty:
         return None
+    if x not in df.columns or y not in df.columns:
+        return None
+    if color and color not in df.columns:
+        color = None
     fig = px.bar(
         df,
         x=x,
@@ -234,6 +242,8 @@ def make_horizontal_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str
 def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
     if df.empty:
         return None
+    if names not in df.columns or values not in df.columns:
+        return None
     fig = px.pie(
         df,
         names=names,
@@ -254,7 +264,7 @@ def make_pie(df: pd.DataFrame, names: str, values: str, title: str):
 
 
 def make_line_bar(score_df: pd.DataFrame, standard_axis: bool = False):
-    if score_df.empty:
+    if score_df.empty or "最终得分" not in score_df.columns:
         return None
     plot_df = score_df.reset_index(drop=True).copy()
     plot_df["趋势序号"] = range(1, len(plot_df) + 1)

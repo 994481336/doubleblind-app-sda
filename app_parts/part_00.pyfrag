@@ -32,6 +32,34 @@ from boeing_eval.parsers import parse_many
 from boeing_eval.reports import REPORT_TITLE, build_html_report, build_word_report
 
 
+_analysis_loss_by_item = loss_by_item
+
+
+def ensure_columns(df: pd.DataFrame, defaults: dict[str, object]) -> pd.DataFrame:
+    data = df.copy()
+    for col, default in defaults.items():
+        if col not in data.columns:
+            data[col] = default
+    return data
+
+
+def safe_columns(df: pd.DataFrame, columns: list[str], defaults: dict[str, object] | None = None) -> pd.DataFrame:
+    data = ensure_columns(df, {col: "" for col in columns})
+    if defaults:
+        data = ensure_columns(data, defaults)
+    return data[columns]
+
+
+def loss_by_item(deductions: pd.DataFrame, group_cols: list[str], top_n: int | None = None) -> pd.DataFrame:
+    if deductions.empty:
+        return pd.DataFrame()
+    safe_deductions = ensure_columns(deductions, {col: "未识别" for col in group_cols})
+    for col in ["失分", "扣分值", "标准分值"]:
+        if col not in safe_deductions.columns:
+            safe_deductions[col] = 0
+    return _analysis_loss_by_item(safe_deductions, group_cols, top_n=top_n)
+
+
 def _fleet_stats_fallback(pilot_scores: pd.DataFrame) -> pd.DataFrame:
     if pilot_scores.empty or "机型" not in pilot_scores.columns:
         return pd.DataFrame()
