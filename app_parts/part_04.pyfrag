@@ -195,7 +195,15 @@ with tab1:
     if not company_df.empty:
         with chart_left:
             with section_card("单位平均分", "紧凑对比"):
-                fig = make_bar(company_df, "所属单位", "平均分", "各单位平均得分", color="模板类型")
+                fig = make_bar(
+                    company_df,
+                    "所属单位",
+                    "平均分",
+                    "各单位平均得分",
+                    color="模板类型",
+                    reference_y=avg_score,
+                    reference_label="整体平均分",
+                )
                 if fig:
                     st.plotly_chart(fig, width="stretch")
 
@@ -209,7 +217,7 @@ with tab1:
                     st.plotly_chart(fig, width="stretch")
 
     with section_card("单位统计", "人员、分数和技术等级"):
-        st.dataframe(display_df(company_df), width="stretch", hide_index=True)
+        st.dataframe(display_df(company_df), width="stretch", height=table_height(company_df), hide_index=True)
 
     overview_left, overview_right = st.columns([1, 1])
     with overview_left:
