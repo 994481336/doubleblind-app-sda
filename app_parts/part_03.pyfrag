@@ -83,7 +83,20 @@ def display_df(df: pd.DataFrame, evaluator_label: str | None = None) -> pd.DataF
     return df.rename(columns=rename_map)
 
 
-def make_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None):
+def table_height(df: pd.DataFrame, min_rows: int = 3, max_rows: int = 28) -> int:
+    rows = min(max(len(df), min_rows), max_rows)
+    return 38 + rows * 35
+
+
+def make_bar(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    title: str,
+    color: str | None = None,
+    reference_y: float | None = None,
+    reference_label: str = "平均线",
+):
     if df.empty:
         return None
     fig = px.bar(
@@ -109,7 +122,21 @@ def make_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = N
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         barmode="group",
     )
-    fig.update_xaxes(showgrid=False, linecolor="rgba(100,116,139,0.25)")
+    if reference_y is not None and pd.notna(reference_y):
+        fig.add_hline(
+            y=float(reference_y),
+            line_width=2,
+            line_dash="dash",
+            line_color="#b85d5d",
+            annotation_text=f"{reference_label} {float(reference_y):.2f}",
+            annotation_position="top left",
+            annotation_font_color="#8f3434",
+            annotation_font_size=12,
+        )
+    xaxis_options = {"showgrid": False, "linecolor": "rgba(100,116,139,0.25)"}
+    if x in df.columns and df[x].nunique(dropna=False) > 10:
+        xaxis_options.update({"tickangle": -30, "automargin": True})
+    fig.update_xaxes(**xaxis_options)
     fig.update_yaxes(gridcolor="rgba(100,116,139,0.16)", zeroline=False)
     return fig
 
@@ -246,4 +273,4 @@ def render_quality_table(quality_df: pd.DataFrame) -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.dataframe(display_df(quality_df), width="stretch", hide_index=True)
+    st.dataframe(display_df(quality_df), width="stretch", height=table_height(quality_df), hide_index=True)
