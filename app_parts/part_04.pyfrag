@@ -98,8 +98,11 @@ def section_card(title: str, meta: str = ""):
         yield
 
 
+PARSER_CACHE_VERSION = "2026-07-08-yto-unit-merge-v2"
+
+
 @st.cache_data(show_spinner=False)
-def parse_uploaded_files(uploaded_payload: tuple[tuple[str, bytes], ...]):
+def parse_uploaded_files(uploaded_payload: tuple[tuple[str, bytes], ...], parser_version: str):
     return parse_many(list(uploaded_payload))
 
 
@@ -150,7 +153,7 @@ if not uploaded_files:
     st.stop()
 
 payload = tuple((file.name, file.getvalue()) for file in uploaded_files)
-summaries, ratings, summary_scores, deductions = parse_uploaded_files(payload)
+summaries, ratings, summary_scores, deductions = parse_uploaded_files(payload, PARSER_CACHE_VERSION)
 pilot_scores = build_pilot_scores(ratings, summary_scores)
 quality_df = template_quality(summaries, pilot_scores)
 
